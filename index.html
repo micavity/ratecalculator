@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Creator Rate Calculator</title>
+  <meta name="description" content="Free sponsorship rate calculator for gaming creators on Twitch, YouTube and TikTok. Find out what to charge for sponsored streams, videos and posts.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <span class="brand">Creator Rate Calculator</span>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1>What should you charge for a sponsorship?</h1>
+      <p>Enter your stats and get an estimated rate for sponsored streams, videos and posts. Built for gaming creators. Free, no sign-up.</p>
+    </section>
+
+    <div class="layout">
+      <form id="calc" class="panel" autocomplete="off" novalidate>
+        <fieldset class="platforms">
+          <legend>Your platforms</legend>
+          <label class="chip"><input type="checkbox" name="platform" value="twitch" checked> Twitch</label>
+          <label class="chip"><input type="checkbox" name="platform" value="youtube" checked> YouTube</label>
+          <label class="chip"><input type="checkbox" name="platform" value="tiktok"> TikTok</label>
+        </fieldset>
+
+        <fieldset class="group" data-platform="twitch">
+          <legend>Twitch</legend>
+          <label>Average concurrent viewers
+            <input type="number" name="twitchViewers" min="0" inputmode="numeric" placeholder="e.g. 80">
+            <small>Your average viewers over the last 30 days (shown in Twitch analytics).</small>
+          </label>
+          <label>Typical stream length (hours)
+            <input type="number" name="twitchHours" min="1" max="24" step="0.5" value="3" inputmode="decimal">
+          </label>
+        </fieldset>
+
+        <fieldset class="group" data-platform="youtube">
+          <legend>YouTube</legend>
+          <label>Average views per video
+            <input type="number" name="ytViews" min="0" inputmode="numeric" placeholder="e.g. 5000">
+            <small>Average of your last 10 long-form videos, after about 30 days.</small>
+          </label>
+          <label>Average views per Short <span class="opt">optional</span>
+            <input type="number" name="ytShortsViews" min="0" inputmode="numeric" placeholder="e.g. 12000">
+          </label>
+          <label>Engagement rate % <span class="opt">optional</span>
+            <input type="number" name="ytEngagement" min="0" max="100" step="0.1" inputmode="decimal" placeholder="e.g. 4">
+            <small>(Likes + comments) ÷ views × 100. About 4% is typical.</small>
+          </label>
+        </fieldset>
+
+        <fieldset class="group" data-platform="tiktok">
+          <legend>TikTok</legend>
+          <label>Average views per video
+            <input type="number" name="ttViews" min="0" inputmode="numeric" placeholder="e.g. 20000">
+            <small>Average of your last 10–20 videos. Leave out one-off viral hits.</small>
+          </label>
+          <label>Engagement rate % <span class="opt">optional</span>
+            <input type="number" name="ttEngagement" min="0" max="100" step="0.1" inputmode="decimal" placeholder="e.g. 6">
+            <small>(Likes + comments + shares) ÷ views × 100. About 6% is typical.</small>
+          </label>
+        </fieldset>
+
+        <fieldset class="group">
+          <legend>Your audience</legend>
+          <label>Where most of your audience is
+            <select name="region">
+              <option value="tier1">Mostly US, UK, Canada, Australia</option>
+              <option value="mixed" selected>Mixed / worldwide</option>
+              <option value="other">Mostly other regions</option>
+            </select>
+          </label>
+          <label>Content focus
+            <select name="focus">
+              <option value="gaming" selected>Gaming (general)</option>
+              <option value="competitive">Competitive / esports</option>
+              <option value="tech">PC, hardware &amp; gear</option>
+              <option value="mobile">Mobile gaming</option>
+            </select>
+          </label>
+        </fieldset>
+      </form>
+
+      <section class="panel results" aria-live="polite">
+        <h2>Your estimated rates</h2>
+        <div id="results">
+          <p class="empty">Enter your stats to see your rates.</p>
+        </div>
+        <div class="actions" hidden id="actions">
+          <button type="button" id="copy">Copy my rates</button>
+          <span id="copied" class="copied" hidden>Copied!</span>
+        </div>
+        <p class="disclaimer">These are estimates based on common industry rules of thumb, not guarantees. Real offers vary by brand, campaign and your negotiation. Use the range as a starting point.</p>
+      </section>
+    </div>
+
+    <section class="tips">
+      <h2>Tips for pricing your first deals</h2>
+      <ul>
+        <li><strong>Quote the top of your range first.</strong> Brands expect to negotiate.</li>
+        <li><strong>Charge extra for usage rights.</strong> If a brand wants to run your content as an ad, that's usually +30–100%.</li>
+        <li><strong>Exclusivity costs more.</strong> Agreeing not to work with competitors for a period should add to the price.</li>
+        <li><strong>Bundles sell well.</strong> Offer a stream + video + short package at a small discount.</li>
+        <li><strong>Get it in writing.</strong> Agree on deliverables, deadlines and payment date before you start.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">Estimates only. Not affiliated with Twitch, YouTube or TikTok.</div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
