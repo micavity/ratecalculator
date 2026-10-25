@@ -188,6 +188,8 @@ copyBtn.addEventListener('click', async () => {
   }
 });
 
+document.getElementById('year').textContent = new Date().getFullYear();
+
 form.addEventListener('input', render);
 form.addEventListener('change', render);
 render();

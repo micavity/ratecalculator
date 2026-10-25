@@ -1,4 +1,6 @@
-# Creator Rate Calculator
+# CreatorGG
+
+**Know your worth. Land the deal.**
 
 A free sponsorship rate calculator for gaming creators on Twitch, YouTube and TikTok.
 
