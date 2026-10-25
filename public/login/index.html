@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · CreatorGG</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap"><a class="brand" href="/">Creator<span class="gg">GG</span></a></div>
+  </header>
+
+  <main class="wrap">
+    <section class="panel auth-panel">
+      <h1>Get your free media kit</h1>
+      <p class="muted">Sign in with the platform you stream or post on. We pull your stats automatically, and brands see they're verified.</p>
+
+      <p class="alert" id="error" hidden></p>
+
+      <div class="auth-buttons">
+        <a class="button button-twitch" href="/auth/twitch">Continue with Twitch</a>
+        <a class="button button-youtube" href="/auth/youtube">Continue with YouTube</a>
+      </div>
+
+      <p class="small muted">On TikTok only? Sign in with Twitch or YouTube for now and add your TikTok stats by hand. You can link more platforms after signing in.</p>
+      <p class="small muted">We only ask for read-only access. We never post anything or see your password.</p>
+    </section>
+  </main>
+
+  <script>
+    const messages = {
+      cancelled: 'Sign-in was cancelled.',
+      expired: 'That sign-in link expired. Please try again.',
+      no_channel: "That Google account doesn't have a YouTube channel. Try another account.",
+      not_configured: "That sign-in option isn't set up yet.",
+      failed: 'Something went wrong signing in. Please try again.',
+    };
+    const code = new URLSearchParams(location.search).get('error');
+    if (code) {
+      const el = document.getElementById('error');
+      el.textContent = messages[code] || messages.failed;
+      el.hidden = false;
+    }
+    // Already signed in? Go straight to the dashboard
+    fetch('/api/me').then((res) => { if (res.ok && !code) location.replace('/dashboard/'); }).catch(() => {});
+  </script>
+</body>
+</html>

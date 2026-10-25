@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard · CreatorGG</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="/">Creator<span class="gg">GG</span></a>
+      <button type="button" class="button-link" id="logout">Log out</button>
+    </div>
+  </header>
+
+  <main class="wrap dashboard" id="app" hidden>
+    <p class="alert" id="banner" hidden></p>
+
+    <section class="panel kit-link">
+      <div>
+        <h1>Your media kit</h1>
+        <p class="kit-url"><span id="kitUrl"></span></p>
+      </div>
+      <div class="kit-link-actions">
+        <button type="button" id="copyLink">Copy link</button>
+        <a class="button button-secondary" id="viewKit" target="_blank" rel="noopener">View</a>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <h2>Linked accounts</h2>
+        <button type="button" class="button-secondary" id="refresh">Refresh stats</button>
+      </div>
+      <div id="connections"></div>
+    </section>
+
+    <form id="profile" class="panel" novalidate>
+      <h2>Profile</h2>
+      <label>Display name
+        <input type="text" name="displayName" maxlength="60" required>
+      </label>
+      <label>Your link
+        <span class="prefixed"><span class="prefix" id="slugPrefix"></span><input type="text" name="slug" maxlength="30" required pattern="[a-z0-9_\-]{3,30}"></span>
+        <small>Letters, numbers, dashes and underscores.</small>
+      </label>
+      <label>Bio
+        <textarea name="bio" maxlength="500" rows="4" placeholder="Who you are, what you play, and what your community is like."></textarea>
+        <small><span id="bioCount">0</span>/500</small>
+      </label>
+      <label>Games you play
+        <input type="text" name="games" maxlength="200" placeholder="e.g. Valorant, Minecraft, Arc Raiders">
+        <small>Separate with commas.</small>
+      </label>
+      <label>Business email
+        <input type="email" name="contactEmail" maxlength="254" placeholder="you@example.com">
+        <small>Shown as a "Work with me" button so brands can reach you.</small>
+      </label>
+
+      <h2>Stats you enter</h2>
+      <p class="muted small">Twitch doesn't share average viewers and TikTok doesn't share stats with apps like ours, so add these yourself. They're marked "self-reported" on your kit.</p>
+      <fieldset class="group">
+        <legend>Twitch</legend>
+        <label>Average concurrent viewers
+          <input type="number" name="twitchAvgViewers" min="0" inputmode="numeric" placeholder="e.g. 80">
+          <small>Your 30-day average from Twitch analytics.</small>
+        </label>
+        <label>Typical stream length (hours)
+          <input type="number" name="twitchHours" min="0.5" max="24" step="0.5" inputmode="decimal">
+        </label>
+      </fieldset>
+      <fieldset class="group">
+        <legend>TikTok</legend>
+        <label>Username
+          <input type="text" name="tiktokHandle" maxlength="30" placeholder="@yourname">
+        </label>
+        <label>Followers
+          <input type="number" name="tiktokFollowers" min="0" inputmode="numeric">
+        </label>
+        <label>Average views per video
+          <input type="number" name="tiktokAvgViews" min="0" inputmode="numeric">
+        </label>
+        <label>Engagement rate %
+          <input type="number" name="tiktokEngagement" min="0" max="100" step="0.1" inputmode="decimal">
+        </label>
+      </fieldset>
+
+      <h2>Rates</h2>
+      <label>Where most of your audience is
+        <select name="region">
+          <option value="tier1">Mostly US, UK, Canada, Australia</option>
+          <option value="mixed">Mixed / worldwide</option>
+          <option value="other">Mostly other regions</option>
+        </select>
+      </label>
+      <label>Content focus
+        <select name="focus">
+          <option value="gaming">Gaming (general)</option>
+          <option value="competitive">Competitive / esports</option>
+          <option value="tech">PC, hardware &amp; gear</option>
+          <option value="mobile">Mobile gaming</option>
+        </select>
+      </label>
+      <label class="toggle">
+        <input type="checkbox" name="showRates">
+        Show estimated rates on my media kit
+      </label>
+
+      <div class="save-bar">
+        <button type="submit" id="save">Save changes</button>
+        <span id="saveStatus" class="save-status" role="status"></span>
+      </div>
+    </form>
+  </main>
+
+  <script type="module" src="/dashboard/dashboard.js"></script>
+</body>
+</html>
