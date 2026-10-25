@@ -1,4 +1,4 @@
-import { REGION_MULTIPLIER, FOCUS_MULTIPLIER } from '../public/rates.js';
+import { REGION_MULTIPLIER, FOCUS_MULTIPLIER } from '../../public/rates.js';
 import { twitchAppToken, getTwitchStats, twitchConfigured } from './twitch.js';
 import { getYouTubeStats, youtubeConfigured } from './youtube.js';
 

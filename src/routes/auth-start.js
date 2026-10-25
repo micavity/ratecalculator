@@ -1,5 +1,5 @@
-import { PROVIDERS, STATE_COOKIE, callbackUrl } from '../../../lib/oauth.js';
-import { cookie, randomToken, redirect } from '../../../lib/http.js';
+import { PROVIDERS, STATE_COOKIE, callbackUrl } from '../lib/oauth.js';
+import { cookie, randomToken, redirect } from '../lib/http.js';
 
 // Starts sign-in: /auth/twitch or /auth/youtube
 export async function onRequestGet({ request, env, params }) {

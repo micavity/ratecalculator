@@ -1,8 +1,8 @@
-import { json } from '../../lib/http.js';
-import { getSessionUser } from '../../lib/session.js';
-import { getConnections, profileFields } from '../../lib/users.js';
-import { twitchConfigured } from '../../lib/twitch.js';
-import { youtubeConfigured } from '../../lib/youtube.js';
+import { json } from '../lib/http.js';
+import { getSessionUser } from '../lib/session.js';
+import { getConnections, profileFields } from '../lib/users.js';
+import { twitchConfigured } from '../lib/twitch.js';
+import { youtubeConfigured } from '../lib/youtube.js';
 
 // The signed-in creator's profile and linked accounts
 export async function onRequestGet({ request, env }) {

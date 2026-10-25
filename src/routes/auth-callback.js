@@ -1,8 +1,8 @@
-import { PROVIDERS, STATE_COOKIE, callbackUrl } from '../../../lib/oauth.js';
-import { cookie, getCookie } from '../../../lib/http.js';
-import { createSession, getSessionUser } from '../../../lib/session.js';
-import { signInWithAccount, LinkError } from '../../../lib/users.js';
-import { NoChannelError } from '../../../lib/youtube.js';
+import { PROVIDERS, STATE_COOKIE, callbackUrl } from '../lib/oauth.js';
+import { cookie, getCookie } from '../lib/http.js';
+import { createSession, getSessionUser } from '../lib/session.js';
+import { signInWithAccount, LinkError } from '../lib/users.js';
+import { NoChannelError } from '../lib/youtube.js';
 
 // Where Twitch / Google send the creator back after they approve
 export async function onRequestGet({ request, env, params }) {

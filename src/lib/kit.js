@@ -1,5 +1,5 @@
 import { escapeHtml as e } from './http.js';
-import { estimateRates, formatRange } from '../public/rates.js';
+import { estimateRates, formatRange } from '../../public/rates.js';
 import { rateInput } from './users.js';
 
 const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });

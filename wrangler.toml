@@ -1,6 +1,12 @@
 name = "ratecalculator"
-pages_build_output_dir = "public"
+main = "src/index.js"
 compatibility_date = "2025-01-01"
+
+# Static pages. Files here are served directly; other requests go to src/index.js.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+not_found_handling = "404-page"
 
 [[d1_databases]]
 binding = "DB"

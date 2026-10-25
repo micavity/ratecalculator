@@ -1,5 +1,5 @@
-import { json, sameOrigin } from '../../../lib/http.js';
-import { getSessionUser } from '../../../lib/session.js';
+import { json, sameOrigin } from '../lib/http.js';
+import { getSessionUser } from '../lib/session.js';
 
 // Unlinks a platform. Linked accounts are also how creators sign in,
 // so the last one can't be removed.

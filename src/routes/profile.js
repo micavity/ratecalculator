@@ -1,6 +1,6 @@
-import { json, sameOrigin } from '../../lib/http.js';
-import { getSessionUser } from '../../lib/session.js';
-import { validateProfile, updateProfile } from '../../lib/users.js';
+import { json, sameOrigin } from '../lib/http.js';
+import { getSessionUser } from '../lib/session.js';
+import { validateProfile, updateProfile } from '../lib/users.js';
 
 export async function onRequestPut({ request, env }) {
   if (!sameOrigin(request)) return json({ error: 'Bad origin' }, 403);

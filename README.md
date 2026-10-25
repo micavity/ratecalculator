@@ -4,17 +4,18 @@
 
 Free sponsorship rate calculator and media kits for gaming creators on Twitch, YouTube and TikTok.
 
-Runs entirely on Cloudflare: Pages (static site), Pages Functions (backend) and D1 (database).
+Runs entirely on Cloudflare: a Worker with static assets, plus D1 for the database.
 
 ## Project layout
 
 - `public/`: static pages (rate calculator, login, dashboard)
 - `public/rates.js`: rate formulas, shared by the calculator and media kits
-- `functions/`: backend routes
-  - `[slug].js`: public media kits at `/<name>`
-  - `auth/[provider]/`: Twitch and YouTube sign-in
-  - `api/`: dashboard API
-- `lib/`: shared backend code
+- `src/index.js`: the Worker. Static files in `public/` are served first; everything else is routed here.
+- `src/routes/`: backend routes
+  - `kit.js`: public media kits at `/<name>`
+  - `auth-start.js`, `auth-callback.js`: Twitch and YouTube sign-in
+  - the rest: dashboard API
+- `src/lib/`: shared backend code
 - `schema.sql`: database tables
 
 ## Setup
@@ -37,7 +38,7 @@ Put the database ID in `wrangler.toml`.
 4. **Credentials → API key**, restricted to YouTube Data API v3.
 
 ### 4. Secrets
-Cloudflare Pages project → **Settings → Variables and Secrets**, add as encrypted secrets:
+Cloudflare Worker → **Settings → Variables and Secrets**, add as encrypted secrets:
 
 | Name | From |
 |---|---|
@@ -53,7 +54,7 @@ Redeploy after adding them.
 
 ```sh
 npx wrangler d1 execute DB --local --file=schema.sql
-npx wrangler pages dev
+npx wrangler dev
 ```
 
 Put local secrets in `.dev.vars` (not committed).
