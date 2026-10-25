@@ -5,5 +5,4 @@ compatibility_date = "2025-01-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "creatorgg"
-# Replace with the database ID from Cloudflare → Storage & Databases → D1
-database_id = "00000000-0000-0000-0000-000000000000"
+database_id = "7bcb071d-e872-471e-9f6d-9cd433b9ad5c"
