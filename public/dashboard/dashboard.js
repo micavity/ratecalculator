@@ -563,40 +563,87 @@ const PRICES = {
 };
 const GRACE_MS = 3 * 86400000;
 
+// Stripe's customer portal sign-in page: lets people manage billing with
+// just their email, e.g. if they can't sign in to CreatorGG
+const STRIPE_PORTAL_LOGIN = 'https://billing.stripe.com/p/login/14A14oftjbK7bnjcZO0RG00';
+
+// e.g. "Monthly · renews 11/26/2026" or "Gifted · never expires"
+function planDetail() {
+  const { plan, billing } = state;
+  if (plan.plan === 'free') return '';
+  if (plan.source === 'gift') {
+    return plan.expires ? `Gifted · until ${new Date(plan.expires).toLocaleDateString()}` : 'Gifted · never expires';
+  }
+  if (billing.status === 'past_due') return `Payment failed · update your card to keep ${plan.name}`;
+  if (!plan.expires) return '';
+  // plan.expires includes a few days' grace after the paid period
+  const periodEnd = new Date(plan.expires - GRACE_MS).toLocaleDateString();
+  const cadence = billing.interval === 'year' ? 'Yearly' : 'Monthly';
+  return billing.cancelAtPeriodEnd ? `${cadence} · ends ${periodEnd}` : `${cadence} · renews ${periodEnd}`;
+}
+
+// Opens Stripe's portal. Shown to anyone who has ever paid, so creators whose
+// plan lapsed can still update their card and see invoices.
+function manageButton(text = 'Manage subscription') {
+  const manage = el('button', { type: 'button', class: 'button-secondary plan-button', text });
+  manage.addEventListener('click', () => goToStripe('/api/billing/portal', {}, manage));
+  return manage;
+}
+
+function renderBilling() {
+  const { plan, billing } = state;
+  const body = document.getElementById('billingBody');
+  const detail = planDetail();
+  const lines = [
+    el('p', {}, [
+      el('strong', { text: `${plan.name} plan` }),
+      el('span', { class: detail.startsWith('Payment failed') ? 'plan-warning' : 'muted', text: detail ? ` · ${detail}` : '' }),
+    ]),
+  ];
+  if (plan.source === 'gift' && billing.subscribed) {
+    lines.push(el('p', { class: 'small plan-warning', text: "You also have a paid subscription. Your gift covers you, so cancel the subscription if you don't want to keep paying." }));
+  } else if (plan.plan === 'free' && billing.hasCustomer) {
+    lines.push(el('p', { class: 'small muted', text: 'Your subscription has ended. You can still see past invoices and update your card.' }));
+  }
+  const actions = [];
+  if (billing.configured && billing.hasCustomer) actions.push(manageButton(billing.subscribed ? 'Manage subscription' : 'Billing & invoices'));
+  if (!billing.subscribed && plan.source !== 'gift') actions.push(el('a', { class: 'button plan-button', href: '/pricing/', text: plan.plan === 'free' ? 'See plans' : 'Compare plans' }));
+  if (actions.length) lines.push(el('div', { class: 'kit-link-actions' }, actions));
+  if (billing.hasCustomer) {
+    lines.push(el('p', { class: 'small muted' }, [
+      document.createTextNode('Change your plan, update your card, cancel, or download invoices. Payments are handled securely by Stripe. You can also '),
+      el('a', { href: STRIPE_PORTAL_LOGIN, target: '_blank', rel: 'noopener', text: 'manage billing with just your email' }),
+      document.createTextNode('.'),
+    ]));
+  } else if (plan.plan === 'free') {
+    lines.push(el('p', { class: 'small muted', text: 'Upgrade any time for your own rates, detailed analytics, tracked brand links and more. Cancel whenever you like.' }));
+  }
+  body.replaceChildren(...lines);
+}
+
 function renderPlan() {
   const bar = document.getElementById('planBar');
   const { plan, limits } = state;
   bar.replaceChildren();
   const { billing } = state;
+  renderBilling();
   if (limits.essential) {
-    let detail = '';
-    if (plan.source === 'gift') {
-      detail = plan.expires ? `Gifted · until ${new Date(plan.expires).toLocaleDateString()}` : 'Gifted · never expires';
-    } else if (billing.status === 'past_due') {
-      detail = `Payment failed · update your card to keep ${plan.name}`;
-    } else if (plan.expires) {
-      // plan.expires includes a few days' grace after the paid period
-      const periodEnd = new Date(plan.expires - GRACE_MS).toLocaleDateString();
-      const cadence = billing.interval === 'year' ? 'Yearly' : 'Monthly';
-      detail = billing.cancelAtPeriodEnd ? `${cadence} · ends ${periodEnd}` : `${cadence} · renews ${periodEnd}`;
-    }
+    const detail = planDetail();
     bar.append(
       el('strong', { text: `${plan.name} plan` }),
       el('span', { class: detail.startsWith('Payment failed') ? 'plan-warning' : 'muted', text: detail ? ` · ${detail}` : '' }),
     );
     if (plan.founding) bar.append(el('span', { class: 'founding-badge', text: '★ Founding Creator' }));
-    if (billing.configured && billing.hasCustomer) {
-      const manage = el('button', { type: 'button', class: 'button-secondary plan-button', text: 'Manage subscription' });
-      manage.addEventListener('click', () => goToStripe('/api/billing/portal', {}, manage));
-      bar.append(manage);
-    }
+    if (billing.configured && billing.hasCustomer) bar.append(manageButton());
   } else {
     bar.append(el('span', { class: 'plan-pitch' }, [
       el('strong', { text: 'Free plan. ' }),
       document.createTextNode('Essential adds your own rates and packages, detailed analytics, brand tracking links, kit versions and more.'),
     ]));
     if (billing.configured) {
-      bar.append(el('span', { class: 'plan-actions' }, upgradeButtons('essential')));
+      const actions = upgradeButtons('essential');
+      if (billing.hasCustomer) actions.push(manageButton('Billing & invoices'));
+      bar.append(el('span', { class: 'plan-actions' }, actions));
       if (state.referralDiscount) {
         bar.append(el('span', { class: 'plan-note', text: "You were referred by a creator, so you'll get 20% off your first 3 months." }));
       }

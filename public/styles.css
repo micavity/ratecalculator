@@ -1579,3 +1579,8 @@ html[data-kit-style="gradient"] body {
 
 .game-suggestions li:hover, .game-suggestions li[aria-selected="true"] { background: var(--accent-soft); }
 .game-suggestions img { width: 26px; height: 35px; border-radius: 4px; object-fit: cover; background: var(--border); }
+
+/* Plan & billing panel */
+
+.billing-panel p { margin: 0 0 10px; }
+.billing-panel .kit-link-actions { flex-wrap: wrap; margin-bottom: 10px; }
