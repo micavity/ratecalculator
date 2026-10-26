@@ -139,6 +139,17 @@ export const MIGRATIONS = [
     'CREATE INDEX IF NOT EXISTS commissions_referrer ON commissions(referrer_id, status)',
     'CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)',
   ],
+  // 5: daily stat snapshots for growth charts
+  [
+    `CREATE TABLE IF NOT EXISTS stat_snapshots (
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      day TEXT NOT NULL,
+      platform TEXT NOT NULL,
+      followers INTEGER,
+      avg_views INTEGER,
+      PRIMARY KEY (user_id, platform, day)
+    )`,
+  ],
 ];
 
 let ready = null;

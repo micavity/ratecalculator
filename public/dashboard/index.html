@@ -33,6 +33,16 @@
 
     <!-- Overview -->
     <div id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" class="tab-panel">
+      <section class="panel checklist" id="checklist" hidden>
+        <div class="section-head">
+          <h2>Complete your kit</h2>
+          <button type="button" class="button-link" id="hideChecklist">Hide</button>
+        </div>
+        <p class="small muted">Complete kits get more replies from brands. <span id="checklistCount"></span></p>
+        <div class="progress" aria-hidden="true"><span id="checklistBar"></span></div>
+        <ul class="checklist-items" id="checklistItems"></ul>
+      </section>
+
       <section class="panel kit-link">
         <div>
           <h1>Your media kit</h1>

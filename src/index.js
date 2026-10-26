@@ -20,6 +20,7 @@ import * as referrals from './routes/referrals.js';
 import { ensureSchema } from './lib/migrate.js';
 import { refreshStaleUsers } from './lib/users.js';
 import { pruneOldEvents } from './lib/analytics.js';
+import { takeSnapshots } from './lib/snapshots.js';
 
 // [method, path pattern, handler]. ":name" matches one path segment.
 const ROUTES = [
@@ -98,5 +99,6 @@ export default {
     await ensureSchema(env);
     ctx.waitUntil(refreshStaleUsers(env));
     ctx.waitUntil(pruneOldEvents(env));
+    ctx.waitUntil(takeSnapshots(env).catch((err) => console.error('Snapshots failed:', err.message)));
   },
 };

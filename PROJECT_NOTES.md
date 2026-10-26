@@ -76,6 +76,8 @@ Free media kits and sponsorship rate estimates for creators. Built for gaming cr
 - Admin page: creator search, plan gifting, Founding Creator badge, site stats, affiliates and payouts
 - Privacy Policy and Terms (cover YouTube data, billing and referrals), account deletion
 - `robots.txt` and `sitemap.xml`
+- Daily stat snapshots (saved by the cron job, `src/lib/snapshots.js`), the start of Pro's growth charts. YouTube rows are deleted after 30 days (YouTube's rules); Twitch and TikTok rows are kept. Long-term YouTube history would need the YouTube Analytics API.
+- "Complete your kit" checklist at the top of the dashboard Overview (hideable, disappears when done)
 
 ### Waiting on / to do outside the code
 - [ ] **Google verification** of the `youtube.readonly` scope (submitted). Until approved, YouTube sign-in shows "Google hasn't verified this app" and is capped at 100 users. **Don't launch widely until this is approved.**
@@ -90,7 +92,7 @@ Free media kits and sponsorship rate estimates for creators. Built for gaming cr
 
 ## Roadmap (agreed order, open to change)
 
-1. **Before the public launch:** example kits from friends; maybe email alerts ("Razer opened your kit", welcome email; needs an email-sending service); start saving **daily stat snapshots** early so Pro's growth charts have history.
+1. **Before the public launch:** example kits from friends; maybe email alerts ("Razer opened your kit", welcome email; needs an email-sending service); daily stat snapshots (done).
 2. **TikTok verified stats** (TikTok Login Kit; needs TikTok app approval, so start early). Then maybe Instagram (Meta API, needs approval) and Kick.
 3. **Pro ($9.99):** deal tracker, invoices, brand proposals with an Accept button, growth charts, sponsor leads (from creators' brand lists plus a curated list), pitch templates.
 4. **Ultra ($19.99):** AI pitch writer, AI bio and kit copy, automatic sponsor detection.

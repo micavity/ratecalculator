@@ -305,7 +305,83 @@ function renderConnections() {
   }
 }
 
+// "Complete your kit" checklist
+
+const CHECKLIST_HIDDEN = 'cgg_checklist_hidden';
+const KIT_SHARED = 'cgg_kit_shared';
+
+function stored(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function store(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {}
+}
+
+// Opens the Edit kit tab with the given field in view
+function goToField(field) {
+  showTab('edit');
+  if (!field) return;
+  field.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  setTimeout(() => field.focus({ preventScroll: true }), 300);
+}
+
+function checklistItems() {
+  const p = state.profile;
+  const c = state.connections;
+  const audience = p.audience || {};
+  const hasAudience = Object.keys(audience.ages || {}).length || Object.keys(audience.gender || {}).length || (audience.countries || []).length;
+  const missing = ['twitch', 'youtube'].find((key) => !c[key] && state.available[key]);
+  const items = [
+    { done: Boolean(p.bio), label: 'Write a short bio', hint: 'Tell brands who you are and what your community is like.', action: () => goToField(form.elements.bio) },
+    { done: Boolean(p.games), label: 'Add your games or topics', hint: 'Brands search for creators who cover what they sell.', action: () => goToField(form.elements.games) },
+    { done: Boolean(p.contactEmail), label: 'Add a business email', hint: 'It powers the "Work with me" button on your kit.', action: () => goToField(form.elements.contactEmail) },
+  ];
+  if (c.twitch) {
+    items.push({ done: Boolean(p.twitchAvgViewers), label: 'Add your Twitch average viewers', hint: 'Twitch doesn\'t share this with apps, and brands price streams by it.', action: () => goToField(form.elements.twitchAvgViewers) });
+  }
+  items.push(
+    { done: !missing, label: missing ? `Link your ${missing === 'twitch' ? 'Twitch' : 'YouTube'} too` : 'Link your platforms', hint: 'More verified stats make a stronger kit.', action: () => { if (missing) location.href = `/auth/${missing}`; } },
+    { done: p.featured.length > 0, label: 'Feature your best video or clip', hint: 'Brands love seeing your content and its real numbers.', action: () => goToField(form.querySelector('input[name="featured"]')) },
+    { done: Boolean(hasAudience), label: 'Add your audience details', hint: 'Age, gender and top countries from your analytics.', action: () => goToField(form.querySelector('[data-audience]')) },
+    { done: state.views.total > 0 || stored(KIT_SHARED) === '1', label: 'Share your kit with a brand', hint: 'Copies your kit link so you can paste it in an email or DM.', action: () => document.getElementById('copyLink').click() },
+  );
+  return items;
+}
+
+function renderChecklist() {
+  const box = document.getElementById('checklist');
+  const items = checklistItems();
+  const done = items.filter((i) => i.done).length;
+  box.hidden = done === items.length || stored(CHECKLIST_HIDDEN) === '1';
+  if (box.hidden) return;
+  document.getElementById('checklistCount').textContent = `${done} of ${items.length} done.`;
+  document.getElementById('checklistBar').style.width = `${(done / items.length) * 100}%`;
+  document.getElementById('checklistItems').replaceChildren(...items.map((item) => {
+    const button = el('button', { type: 'button', class: 'button-secondary', text: item.done ? 'Done' : 'Do it' });
+    button.disabled = item.done;
+    button.addEventListener('click', item.action);
+    return el('li', { class: item.done ? 'done' : '' }, [
+      el('span', { class: 'check', 'aria-hidden': 'true', text: item.done ? '✓' : '' }),
+      el('div', {}, [el('strong', { text: item.label }), el('p', { class: 'small muted', text: item.hint })]),
+      button,
+    ]);
+  }));
+}
+
+document.getElementById('hideChecklist').addEventListener('click', () => {
+  store(CHECKLIST_HIDDEN, '1');
+  document.getElementById('checklist').hidden = true;
+});
+
 function renderOverview() {
+  renderChecklist();
   renderKitLink();
   renderViews();
   renderRates();
@@ -610,6 +686,8 @@ form.elements.bio.addEventListener('input', () => {
 // Buttons
 
 document.getElementById('copyLink').addEventListener('click', async (event) => {
+  store(KIT_SHARED, '1');
+  renderChecklist();
   try {
     await navigator.clipboard.writeText(kitUrl());
     event.target.textContent = 'Copied!';
