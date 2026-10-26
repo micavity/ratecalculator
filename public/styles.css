@@ -384,7 +384,7 @@ button:disabled { opacity: 0.6; cursor: default; }
 
 .example-head { display: flex; gap: 12px; align-items: center; margin-bottom: 4px; }
 .example-head p { margin: 0; }
-.example-kit .example-avatar { width: 52px; height: 52px; font-size: 1.4rem; border-width: 2px; }
+.example-kit .example-avatar { width: 52px; height: 52px; font-size: 1.4rem; border-width: 2px; background: var(--panel-2); }
 .example-name { font-weight: 800; font-size: 1.2rem; }
 .example-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .example-stats .badge { font-size: 0.7rem; }
