@@ -24,6 +24,12 @@ export function renderAdminPage() {
     <section class="admin-stats" id="stats"></section>
 
     <section class="panel">
+      <h2>Affiliate payouts</h2>
+      <p class="small muted">Send each affiliate their available balance through PayPal, then click "Mark as paid". Earnings are held for 30 days to cover refunds.</p>
+      <div id="payouts"></div>
+    </section>
+
+    <section class="panel">
       <div class="section-head">
         <h2>Creators</h2>
         <form id="search" class="admin-search">
@@ -173,6 +179,44 @@ export function renderAdminPage() {
     document.getElementById('prev').addEventListener('click', () => { page = Math.max(0, page - 1); loadUsers(); });
     document.getElementById('next').addEventListener('click', () => { page += 1; loadUsers(); });
 
+    const money = (cents) => '$' + (cents / 100).toFixed(2);
+
+    async function loadPayouts() {
+      const data = await api('/api/admin/payouts');
+      const box = document.getElementById('payouts');
+      if (!data.affiliates.length) {
+        box.replaceChildren(el('p', { class: 'muted', text: 'No affiliate earnings yet.' }));
+        return;
+      }
+      box.replaceChildren(...data.affiliates.map((a) => {
+        const ready = a.availableCents >= data.minPayoutCents;
+        const pay = el('button', { type: 'button', text: 'Mark ' + money(a.availableCents) + ' as paid' });
+        pay.disabled = !a.availableCents;
+        pay.addEventListener('click', async () => {
+          if (!a.payoutEmail && !confirm(a.displayName + " hasn't added a PayPal email. Mark as paid anyway?")) return;
+          if (!confirm('Have you sent ' + money(a.availableCents) + ' to ' + (a.payoutEmail || a.displayName) + '? This marks it as paid.')) return;
+          try {
+            const result = await api('/api/admin/payouts/' + a.id + '/paid', { method: 'POST' });
+            showBanner('Marked ' + money(result.paidCents) + ' as paid.', 'success');
+            loadPayouts();
+          } catch (err) {
+            showBanner(err.message);
+          }
+        });
+        return el('div', { class: 'admin-row' }, [
+          el('div', {}, [
+            el('a', { href: '/' + a.slug, target: '_blank', rel: 'noopener' }, [el('strong', { text: a.displayName })]),
+            el('span', { class: 'muted', text: ' · code ' + (a.code || '—') }),
+            el('p', { class: 'small', text: 'PayPal: ' + (a.payoutEmail || 'not added yet') }),
+            el('p', { class: 'small muted', text: 'Available ' + money(a.availableCents) + ' · Held ' + money(a.heldCents) + ' · Paid so far ' + money(a.paidCents) }),
+            ready ? el('p', { class: 'small opened', text: 'Ready to pay out' }) : el('p', { class: 'small muted', text: 'Below the ' + money(data.minPayoutCents) + ' minimum' }),
+          ]),
+          el('div', { class: 'admin-actions' }, [pay]),
+        ]);
+      }));
+    }
+
+    loadPayouts().catch((err) => showBanner(err.message));
     loadStats().catch((err) => showBanner(err.message));
     loadUsers();
   </script>

@@ -116,6 +116,31 @@
         <div id="connections"></div>
       </section>
 
+      <section class="panel referral-panel">
+        <h2>Earn with CreatorGG</h2>
+        <p class="small muted" id="referralPitch"></p>
+        <div class="referral-share">
+          <div>
+            <p class="small muted">Your code</p>
+            <p class="referral-code" id="referralCode"></p>
+            <button type="button" class="button-secondary" id="copyReferralCode">Copy code</button>
+          </div>
+          <div>
+            <p class="small muted">Your link</p>
+            <p class="kit-url" id="referralLink"></p>
+            <button type="button" id="copyReferralLink">Copy link</button>
+          </div>
+        </div>
+        <p class="small muted">Your free media kit's "Made with CreatorGG" link also counts as your referral link.</p>
+        <div class="view-stats referral-stats" id="referralStats"></div>
+        <form id="payoutForm" class="link-form payout-form">
+          <input type="email" name="payoutEmail" maxlength="254" placeholder="PayPal email for payouts" aria-label="PayPal email for payouts">
+          <button type="submit" class="button-secondary">Save</button>
+          <span id="payoutStatus" class="save-status" role="status"></span>
+        </form>
+        <p class="small muted" id="referralTerms"></p>
+      </section>
+
       <section class="panel danger-zone">
         <h2>Delete account</h2>
         <p class="small muted">Permanently deletes your media kit, profile, linked accounts and view history. Your kit link stops working right away. This can't be undone.</p>

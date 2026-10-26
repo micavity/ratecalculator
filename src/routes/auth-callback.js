@@ -2,7 +2,10 @@ import { PROVIDERS, STATE_COOKIE, callbackUrl } from '../lib/oauth.js';
 import { cookie, getCookie } from '../lib/http.js';
 import { createSession, getSessionUser } from '../lib/session.js';
 import { signInWithAccount } from '../lib/users.js';
+import { attributeSignup } from '../lib/referrals.js';
 import { NoChannelError } from '../lib/youtube.js';
+
+const REF_COOKIE = 'cgg_ref';
 
 // Where Twitch / Google send the creator back after they approve
 export async function onRequestGet({ request, env, params }) {
@@ -26,8 +29,14 @@ export async function onRequestGet({ request, env, params }) {
   let result = currentUser ? 'linked' : null;
   try {
     const { account, stats } = await provider.complete(env, code, callbackUrl(request, params.provider));
-    const { userId, merged } = await signInWithAccount(env, params.provider, account, stats, currentUser);
+    const { userId, merged, created } = await signInWithAccount(env, params.provider, account, stats, currentUser);
     if (!currentUser) headers.append('set-cookie', await createSession(env, userId));
+    // Credit whoever referred this brand-new creator
+    const ref = getCookie(request, REF_COOKIE);
+    if (created && ref) {
+      await attributeSignup(env, userId, ref);
+      headers.append('set-cookie', cookie(REF_COOKIE, '', 0));
+    }
     if (merged) result = 'merged';
   } catch (err) {
     if (err instanceof NoChannelError) return fail('no_channel');

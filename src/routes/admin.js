@@ -5,6 +5,7 @@ import { json, sameOrigin, html } from '../lib/http.js';
 import { getSessionUser } from '../lib/session.js';
 import { PLAN_RANK, planInfo } from '../lib/plans.js';
 import { renderAdminPage } from '../lib/admin-page.js';
+import { REFERRAL } from '../lib/referrals.js';
 
 function isAdmin(env, user) {
   const ids = String(env.ADMIN_USER_IDS || '').split(',').map((id) => id.trim()).filter(Boolean);
@@ -129,4 +130,35 @@ export async function setFounding({ request, env, params }) {
   const result = await env.DB.prepare('UPDATE users SET founding = ? WHERE id = ?').bind(body.founding ? 1 : 0, params.id).run();
   if (!result.meta?.changes) return json({ error: 'Creator not found' }, 404);
   return json({ ok: true });
+}
+
+// Affiliates with earnings, and how much is ready to pay out
+export async function payouts({ request, env }) {
+  const { response } = await requireAdmin(request, env);
+  if (response) return response;
+  const now = Date.now();
+  const { results } = await env.DB.prepare(
+    `SELECT u.id, u.display_name AS displayName, u.slug, u.payout_email AS payoutEmail, u.referral_code AS code,
+       COALESCE(SUM(CASE WHEN c.status = 'pending' AND c.available_at <= ? THEN c.commission_cents END), 0) AS availableCents,
+       COALESCE(SUM(CASE WHEN c.status = 'pending' AND c.available_at > ? THEN c.commission_cents END), 0) AS heldCents,
+       COALESCE(SUM(CASE WHEN c.status = 'paid' THEN c.commission_cents END), 0) AS paidCents
+     FROM commissions c JOIN users u ON u.id = c.referrer_id
+     GROUP BY u.id
+     ORDER BY availableCents DESC`,
+  ).bind(now, now).all();
+  return json({ minPayoutCents: REFERRAL.minPayoutCents, affiliates: results });
+}
+
+// Marks everything currently available as paid, after you've sent the money
+export async function markPaid({ request, env, params }) {
+  const { response } = await requireAdmin(request, env, { write: true });
+  if (response) return response;
+  const now = Date.now();
+  const due = await env.DB.prepare(
+    "SELECT COALESCE(SUM(commission_cents), 0) AS cents FROM commissions WHERE referrer_id = ? AND status = 'pending' AND available_at <= ?",
+  ).bind(params.id, now).first();
+  await env.DB.prepare(
+    "UPDATE commissions SET status = 'paid', paid_at = ? WHERE referrer_id = ? AND status = 'pending' AND available_at <= ?",
+  ).bind(now, params.id, now).run();
+  return json({ ok: true, paidCents: due.cents });
 }

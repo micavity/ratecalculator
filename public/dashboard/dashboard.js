@@ -321,25 +321,52 @@ const SPECIAL_FIELDS = new Set(['featured', 'theme', 'rateMode', 'useAccent', 'a
 // Plan bar and Essential locks
 
 const PLAN_PRICES = 'Essential is $4.99/month or $49.99/year';
+const GRACE_MS = 3 * 86400000;
 
 function renderPlan() {
   const bar = document.getElementById('planBar');
   const { plan, limits } = state;
   bar.replaceChildren();
+  const { billing } = state;
   if (limits.essential) {
-    const detail = plan.source === 'gift'
-      ? (plan.expires ? `Gifted · until ${new Date(plan.expires).toLocaleDateString()}` : 'Gifted · never expires')
-      : (plan.expires ? `Renews or ends ${new Date(plan.expires).toLocaleDateString()}` : '');
+    let detail = '';
+    if (plan.source === 'gift') {
+      detail = plan.expires ? `Gifted · until ${new Date(plan.expires).toLocaleDateString()}` : 'Gifted · never expires';
+    } else if (billing.status === 'past_due') {
+      detail = 'Payment failed · update your card to keep Essential';
+    } else if (plan.expires) {
+      // plan.expires includes a few days' grace after the paid period
+      const periodEnd = new Date(plan.expires - GRACE_MS).toLocaleDateString();
+      const cadence = billing.interval === 'year' ? 'Yearly' : 'Monthly';
+      detail = billing.cancelAtPeriodEnd ? `${cadence} · ends ${periodEnd}` : `${cadence} · renews ${periodEnd}`;
+    }
     bar.append(
       el('strong', { text: `${plan.name} plan` }),
-      el('span', { class: 'muted', text: detail ? ` · ${detail}` : '' }),
+      el('span', { class: detail.startsWith('Payment failed') ? 'plan-warning' : 'muted', text: detail ? ` · ${detail}` : '' }),
     );
     if (plan.founding) bar.append(el('span', { class: 'founding-badge', text: '★ Founding Creator' }));
+    if (billing.configured && billing.hasCustomer) {
+      const manage = el('button', { type: 'button', class: 'button-secondary plan-button', text: 'Manage subscription' });
+      manage.addEventListener('click', () => goToStripe('/api/billing/portal', {}, manage));
+      bar.append(manage);
+    }
   } else {
-    bar.append(
-      el('span', {}, [el('strong', { text: 'Free plan. ' }), document.createTextNode('Essential adds your own rates and packages, detailed analytics, brand tracking links, kit versions and more.')]),
-      el('span', { class: 'plan-cta', text: `${PLAN_PRICES} · Coming soon` }),
-    );
+    bar.append(el('span', { class: 'plan-pitch' }, [
+      el('strong', { text: 'Free plan. ' }),
+      document.createTextNode('Essential adds your own rates and packages, detailed analytics, brand tracking links, kit versions and more.'),
+    ]));
+    if (billing.configured) {
+      const monthly = el('button', { type: 'button', class: 'plan-button', text: 'Upgrade · $4.99/month' });
+      const yearly = el('button', { type: 'button', class: 'button-secondary plan-button', text: '$49.99/year · 2 months free' });
+      monthly.addEventListener('click', () => goToStripe('/api/billing/checkout', { interval: 'month' }, monthly));
+      yearly.addEventListener('click', () => goToStripe('/api/billing/checkout', { interval: 'year' }, yearly));
+      bar.append(el('span', { class: 'plan-actions' }, [monthly, yearly]));
+      if (state.referralDiscount) {
+        bar.append(el('span', { class: 'plan-note', text: "You were referred by a creator, so you'll get 20% off your first 3 months." }));
+      }
+    } else {
+      bar.append(el('span', { class: 'plan-cta', text: `${PLAN_PRICES} · Coming soon` }));
+    }
   }
   bar.classList.toggle('plan-bar-essential', limits.essential);
 
@@ -348,6 +375,40 @@ function renderPlan() {
     group.classList.toggle('locked', !limits.essential);
     if (!limits.essential) group.querySelectorAll('input, select, textarea, button').forEach((control) => { control.disabled = true; });
   });
+}
+
+// Sends the creator to Stripe Checkout or the Customer Portal
+async function goToStripe(path, body, button) {
+  const label = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Opening…';
+  try {
+    const { url } = await api(path, { method: 'POST', body: JSON.stringify(body) });
+    location.href = url;
+  } catch (err) {
+    showBanner(err.message);
+    button.disabled = false;
+    button.textContent = label;
+  }
+}
+
+// After paying, Stripe's confirmation can take a few seconds to reach us
+async function waitForUpgrade() {
+  showBanner('Payment received! Unlocking Essential…', 'info');
+  for (let i = 0; i < 15 && !state.limits.essential; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    state = { ...state, ...(await api('/api/me')) };
+  }
+  if (state.limits.essential) {
+    showBanner('Welcome to Essential! Everything is unlocked.', 'success');
+    fillForm();
+    renderPlan();
+    renderOverview();
+    renderVersions();
+    loadAnalytics();
+  } else {
+    showBanner("Your payment went through, but Essential isn't showing yet. Refresh in a minute, or contact support@creatorgg.com.", 'info');
+  }
 }
 
 // Rate card and package editors
@@ -654,7 +715,7 @@ function barList(title, rows, label = (r) => r.label) {
 function teaser(text) {
   return el('div', { class: 'teaser' }, [
     el('p', { text }),
-    el('p', { class: 'plan-cta', text: `${PLAN_PRICES} · Coming soon` }),
+    el('p', { class: 'plan-cta', text: state.billing.configured ? `${PLAN_PRICES} · Upgrade at the top of this page` : `${PLAN_PRICES} · Coming soon` }),
   ]);
 }
 
@@ -948,10 +1009,59 @@ newVersionForm.addEventListener('submit', async (event) => {
   }
 });
 
+// Referral program
+
+const referralForm = document.getElementById('payoutForm');
+
+function money(cents) {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+async function loadReferrals() {
+  let data;
+  try {
+    data = await api('/api/referrals');
+  } catch {
+    return;
+  }
+  const p = data.program;
+  document.getElementById('referralPitch').textContent = `Share your link or code. Creators who sign up with it get ${p.discountPercent}% off their first ${p.discountMonths} months of Essential, and you earn ${Math.round(p.commissionRate * 100)}% of what they pay for ${p.commissionMonths} months.`;
+  document.getElementById('referralCode').textContent = data.code;
+  document.getElementById('referralLink').textContent = data.link.replace(/^https?:\/\//, '');
+  document.getElementById('copyReferralLink').onclick = (event) => copyText(data.link, event.target);
+  document.getElementById('copyReferralCode').onclick = (event) => copyText(data.code, event.target);
+  const s = data.stats;
+  const card = (value, label) => el('div', { class: 'stat' }, [el('span', { class: 'stat-value', text: value }), el('span', { class: 'stat-label', text: label })]);
+  document.getElementById('referralStats').replaceChildren(
+    card(number.format(s.signups), 'Sign-ups'),
+    card(number.format(s.paying), 'Paying'),
+    card(money(s.availableCents), 'Ready to pay out'),
+    card(money(s.heldCents), `Held (${p.holdDays} days)`),
+    card(money(s.paidCents), 'Paid to you'),
+  );
+  document.getElementById('referralTerms').textContent = `Earnings are held for ${p.holdDays} days in case of refunds, then paid by PayPal once you reach ${money(p.minPayoutCents)}. When you share your link, say that you earn from it (for example "#ad" or "affiliate link").`;
+  referralForm.elements.payoutEmail.value = data.payoutEmail || '';
+}
+
+referralForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const status = document.getElementById('payoutStatus');
+  try {
+    await api('/api/referrals', { method: 'PUT', body: JSON.stringify({ payoutEmail: referralForm.elements.payoutEmail.value }) });
+    status.textContent = 'Saved';
+    status.className = 'save-status ok';
+  } catch (err) {
+    status.textContent = err.message;
+    status.className = 'save-status error';
+  }
+});
+
 async function init() {
   state = await api('/api/me');
   const params = new URLSearchParams(location.search);
   if (params.get('error')) showBanner(MESSAGES[params.get('error')] || MESSAGES.failed);
+  if (params.get('upgrade') === 'cancelled') showBanner('Checkout cancelled. You have not been charged.', 'info');
+  const justUpgraded = params.get('upgraded');
   if (params.get('connected') === 'merged') {
     showBanner('Account linked. It was on another CreatorGG profile, so we combined the two into one.', 'success');
   } else if (params.get('connected')) {
@@ -967,6 +1077,9 @@ async function init() {
   loadAnalytics();
   showTab(location.hash.slice(1));
   app.hidden = false;
+  loadReferrals();
+  if (justUpgraded && !state.limits.essential) waitForUpgrade();
+  else if (justUpgraded) showBanner('Welcome to Essential! Everything is unlocked.', 'success');
 }
 
 init().catch((err) => {

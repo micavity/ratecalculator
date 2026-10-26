@@ -110,6 +110,35 @@ export const MIGRATIONS = [
     )`,
     'CREATE INDEX IF NOT EXISTS link_events_user ON link_events(user_id, at)',
   ],
+  // 4: Stripe subscriptions, referrals and commissions
+  [
+    'ALTER TABLE users ADD COLUMN stripe_customer_id TEXT',
+    'ALTER TABLE users ADD COLUMN stripe_subscription_id TEXT',
+    "ALTER TABLE users ADD COLUMN subscription_status TEXT NOT NULL DEFAULT ''",
+    'ALTER TABLE users ADD COLUMN subscription_interval TEXT',
+    'ALTER TABLE users ADD COLUMN cancel_at_period_end INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE users ADD COLUMN referral_code TEXT',
+    'ALTER TABLE users ADD COLUMN referred_by TEXT',
+    'ALTER TABLE users ADD COLUMN first_paid_at INTEGER',
+    "ALTER TABLE users ADD COLUMN payout_email TEXT NOT NULL DEFAULT ''",
+    'CREATE UNIQUE INDEX IF NOT EXISTS users_referral_code ON users(referral_code) WHERE referral_code IS NOT NULL',
+    'CREATE INDEX IF NOT EXISTS users_stripe_customer ON users(stripe_customer_id)',
+    'CREATE INDEX IF NOT EXISTS users_referred_by ON users(referred_by)',
+    `CREATE TABLE IF NOT EXISTS commissions (
+      id TEXT PRIMARY KEY,
+      referrer_id TEXT NOT NULL,
+      referred_id TEXT NOT NULL,
+      amount_cents INTEGER NOT NULL,
+      commission_cents INTEGER NOT NULL,
+      currency TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at INTEGER NOT NULL,
+      available_at INTEGER NOT NULL,
+      paid_at INTEGER
+    )`,
+    'CREATE INDEX IF NOT EXISTS commissions_referrer ON commissions(referrer_id, status)',
+    'CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)',
+  ],
 ];
 
 let ready = null;

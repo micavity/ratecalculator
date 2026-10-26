@@ -707,6 +707,27 @@ form.tab-panel[hidden] { display: none; }
   #packagesEditor .row-item .button-link { grid-column: 2; }
 }
 
+.plan-pitch { flex: 1 1 320px; }
+.plan-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.plan-button { padding: 8px 14px; font-size: 0.9rem; }
+.plan-bar-essential .plan-button { margin-left: auto; }
+.plan-note { flex-basis: 100%; color: var(--good); font-size: 0.85rem; }
+.plan-warning { color: #e11d48; font-weight: 600; }
+
+/* Referrals */
+
+.referral-share {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin: 12px 0;
+}
+
+.referral-share p { margin: 0 0 6px; }
+.referral-code { font-size: 1.6rem; font-weight: 800; letter-spacing: 0.06em; color: var(--accent); }
+.referral-stats { grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); margin: 12px 0; }
+.link-form.payout-form { grid-template-columns: minmax(0, 1fr) auto auto; }
+
 /* Analytics, tracked links and kit versions */
 
 .essential-panel .plan-pill { display: none; }

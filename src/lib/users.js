@@ -100,6 +100,20 @@ async function mergeUsers(env, aId, bId, provider, account, stats) {
     statements.push(env.DB.prepare('UPDATE users SET plan = ?, plan_source = ?, plan_expires = ? WHERE id = ?')
       .bind(drop.plan, drop.plan_source, drop.plan_expires, keep.id));
   }
+  // Keep a paying subscription and referral credit from either profile
+  if (drop.stripe_subscription_id && !keep.stripe_subscription_id) {
+    statements.push(env.DB.prepare(`UPDATE users SET stripe_customer_id = ?, stripe_subscription_id = ?, subscription_status = ?,
+      subscription_interval = ?, cancel_at_period_end = ?, first_paid_at = COALESCE(first_paid_at, ?) WHERE id = ?`)
+      .bind(drop.stripe_customer_id, drop.stripe_subscription_id, drop.subscription_status, drop.subscription_interval,
+        drop.cancel_at_period_end, drop.first_paid_at, keep.id));
+  }
+  if (drop.referred_by && !keep.referred_by && drop.referred_by !== keep.id) {
+    statements.push(env.DB.prepare('UPDATE users SET referred_by = ? WHERE id = ?').bind(drop.referred_by, keep.id));
+  }
+  statements.push(env.DB.prepare('UPDATE users SET referred_by = ? WHERE referred_by = ?').bind(keep.id, drop.id));
+  statements.push(env.DB.prepare('UPDATE commissions SET referrer_id = ? WHERE referrer_id = ?').bind(keep.id, drop.id));
+  statements.push(env.DB.prepare('UPDATE commissions SET referred_id = ? WHERE referred_id = ?').bind(keep.id, drop.id));
+
   if (drop.founding && !keep.founding) {
     statements.push(env.DB.prepare('UPDATE users SET founding = 1 WHERE id = ?').bind(keep.id));
   }
@@ -158,7 +172,7 @@ export async function signInWithAccount(env, provider, account, stats, currentUs
     ).bind(id, await uniqueSlug(env, account.slugHint), account.username.slice(0, 60), account.avatarUrl, now, now),
     saveConnection(env, id, provider, account, stats),
   ]);
-  return { userId: id, merged: false };
+  return { userId: id, merged: false, created: true };
 }
 
 export async function getConnections(env, userId) {

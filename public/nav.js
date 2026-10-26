@@ -1,6 +1,13 @@
 // Shows signed-in links in the header when the visitor has a session
 const nav = document.getElementById('site-nav');
 
+// Remember a referral code (?ref=CODE) for 30 days so it's credited at sign-up.
+// The first code wins.
+const ref = new URLSearchParams(location.search).get('ref');
+if (ref && /^[A-Za-z0-9]{3,16}$/.test(ref) && !document.cookie.split('; ').some((c) => c.startsWith('cgg_ref='))) {
+  document.cookie = `cgg_ref=${ref.toUpperCase()}; Path=/; Max-Age=2592000; SameSite=Lax; Secure`;
+}
+
 function link(href, text) {
   const a = document.createElement('a');
   a.href = href;

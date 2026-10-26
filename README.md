@@ -53,6 +53,18 @@ Redeploy after adding them. Check `/api/status` to confirm the site can see them
 ### 5. Admin access
 Add a secret `ADMIN_USER_IDS` with your CreatorGG account ID (shown at the bottom of the dashboard's Overview tab). Separate several IDs with commas. Admins can open `/admin` to search creators, gift plans and see site stats; everyone else gets a 404.
 
+### 6. Payments (Stripe)
+1. Create a product with two recurring prices (monthly and yearly) and put their IDs in `wrangler.toml` under `[vars]`.
+2. Add the secret key as a secret named `STRIPE_SECRET_KEY`.
+3. Add a webhook endpoint at `https://<your-site>/api/stripe/webhook` for these events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`, `charge.refunded`. Add its signing secret as `STRIPE_WEBHOOK_SECRET`.
+4. Turn on the Customer Portal (Settings → Billing → Customer portal) with cancel, update payment method, invoice history and switching between the two prices.
+
+All Stripe requests use API version `2024-06-20`, and webhooks re-fetch objects from Stripe, so the account's default API version doesn't matter.
+
+## Referrals
+
+Every creator gets a referral code (from their kit link) and a link (`/?ref=CODE`), and free kits' footer links carry it. Referred creators get 20% off their first 3 months (a Stripe coupon plus one promotion code per referrer, created automatically). Referrers earn 25% of each payment for 12 months, held 30 days, paid manually via PayPal from `/admin` once over $25. Settings are in `REFERRAL` in `src/lib/referrals.js`.
+
 ## Plans
 
 | Plan | Price | Includes |
@@ -61,7 +73,7 @@ Add a secret `ADMIN_USER_IDS` with your CreatorGG account ID (shown at the botto
 | Essential | $4.99/mo or $49.99/yr | Own rates and packages, no CreatorGG branding, section layout, more colors and kit styles, 6 featured videos, detailed analytics, tracked brand links, 2 extra kit versions |
 | Pro / Ultra | later | |
 
-Plans live on the `users` table (`plan`, `plan_source` = `paid` or `gift`, `plan_expires`, null = never). Limits are in `src/lib/plans.js`. Features are checked on the server; when a plan lapses, Essential settings are kept but hidden. Payments (PayPal) aren't connected yet, so plans can only be gifted from `/admin`.
+Plans live on the `users` table (`plan`, `plan_source` = `paid` or `gift`, `plan_expires`, null = never). Limits are in `src/lib/plans.js`. Features are checked on the server; when a plan lapses, Essential settings are kept but hidden. Paid plans come from Stripe; gifted plans are set from `/admin`. A gift that's at least as good as Essential and lasts at least as long takes priority over a payment.
 
 ## Local development
 

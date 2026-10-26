@@ -15,6 +15,8 @@ import * as analytics from './routes/analytics.js';
 import * as links from './routes/links.js';
 import * as versions from './routes/versions.js';
 import * as admin from './routes/admin.js';
+import * as billing from './routes/billing.js';
+import * as referrals from './routes/referrals.js';
 import { ensureSchema } from './lib/migrate.js';
 import { refreshStaleUsers } from './lib/users.js';
 import { pruneOldEvents } from './lib/analytics.js';
@@ -32,6 +34,11 @@ const ROUTES = [
   ['POST', '/api/versions', versions.onRequestPost],
   ['PUT', '/api/versions/:id', versions.onRequestPut],
   ['DELETE', '/api/versions/:id', versions.onRequestDelete],
+  ['POST', '/api/billing/checkout', billing.checkout],
+  ['POST', '/api/billing/portal', billing.portal],
+  ['POST', '/api/stripe/webhook', billing.webhook],
+  ['GET', '/api/referrals', referrals.onRequestGet],
+  ['PUT', '/api/referrals', referrals.onRequestPut],
   ['POST', '/api/refresh', refresh.onRequestPost],
   ['POST', '/api/logout', logout.onRequestPost],
   ['DELETE', '/api/connections/:provider', disconnect.onRequestDelete],
@@ -41,6 +48,8 @@ const ROUTES = [
   ['GET', '/api/admin/users', admin.users],
   ['POST', '/api/admin/users/:id/plan', admin.setPlan],
   ['POST', '/api/admin/users/:id/founding', admin.setFounding],
+  ['GET', '/api/admin/payouts', admin.payouts],
+  ['POST', '/api/admin/payouts/:id/paid', admin.markPaid],
   ['GET', '/admin', admin.page],
   ['GET', '/:slug', kit.onRequestGet],
   ['GET', '/:slug/:version', kit.onRequestGet],

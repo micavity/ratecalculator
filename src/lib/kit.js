@@ -5,6 +5,7 @@ import {
   THEMES, ESSENTIAL_THEMES, AGE_GROUPS, isHexColor, normalizeSections, hasAudience, parseJson,
 } from './kit-content.js';
 import { planLimits } from './plans.js';
+import { isReferralCode } from './referrals.js';
 
 const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
 const dateFormat = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -239,10 +240,12 @@ export function renderKit(user, connections, { origin, host, viewer, print, path
   const ownerBar = viewer?.id === user.id
     ? '<p class="owner-bar no-print">This is your media kit. <a href="/dashboard/">Edit it on your dashboard →</a></p>'
     : '';
+  // Free kits double as referral links for their creator
+  const ref = isReferralCode(user.referral_code) ? `?ref=${user.referral_code}` : '';
   const footer = hideBranding
     ? ''
     : `<footer class="site-footer no-print">
-    <div class="wrap footer-inner"><span>Made with <a href="/">CreatorGG</a>. <a href="/login/">Make your free media kit →</a></span><nav aria-label="Footer"><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a></nav></div>
+    <div class="wrap footer-inner"><span>Made with <a href="/${ref}">CreatorGG</a>. <a href="/login/${ref}">Make your free media kit →</a></span><nav aria-label="Footer"><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a></nav></div>
   </footer>`;
 
   return page({
