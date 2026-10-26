@@ -1,6 +1,8 @@
 name = "ratecalculator"
 main = "src/index.js"
 compatibility_date = "2025-01-01"
+# Keep variables set in the Cloudflare dashboard when deploying from GitHub
+keep_vars = true
 
 # Static pages. Files here are served directly; other requests go to src/index.js.
 [assets]
