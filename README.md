@@ -64,4 +64,4 @@ The rate ranges and multipliers are at the top of `public/rates.js`. They're bas
 - **YouTube:** price per 1,000 average views (integration, dedicated video, Shorts)
 - **Twitch:** price per average concurrent viewer, per hour
 - **TikTok:** price per 1,000 average views
-- Adjusted for engagement rate, audience region and content focus
+- Adjusted for engagement rate, audience region and niche (gaming plus finance, beauty, lifestyle and more)

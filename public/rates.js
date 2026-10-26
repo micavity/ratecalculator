@@ -17,7 +17,32 @@ const RATES = {
 const ENGAGEMENT_BENCHMARK = { youtube: 4, tiktok: 6 };
 
 export const REGION_MULTIPLIER = { tier1: 1, mixed: 0.8, other: 0.6 };
-export const FOCUS_MULTIPLIER = { gaming: 1, competitive: 1.05, tech: 1.25, mobile: 0.9 };
+// How much brands typically pay in each niche, relative to general gaming.
+// Niches whose viewers are worth more to advertisers (finance, business,
+// tech) command higher rates for the same audience size.
+export const FOCUS_MULTIPLIER = {
+  // Gaming
+  gaming: 1,
+  competitive: 1.05,
+  tech: 1.25,
+  mobile: 0.9,
+  // Other niches
+  finance: 2.2,
+  business: 1.8,
+  technology: 1.5,
+  automotive: 1.3,
+  education: 1.3,
+  health: 1.3,
+  beauty: 1.25,
+  fashion: 1.15,
+  parenting: 1.15,
+  travel: 1.1,
+  food: 1.05,
+  sports: 1,
+  lifestyle: 0.95,
+  entertainment: 0.85,
+  music: 0.8,
+};
 
 // Below this, brands usually offer free product or affiliate deals instead of cash
 const MIN_CASH_RATE = 25;

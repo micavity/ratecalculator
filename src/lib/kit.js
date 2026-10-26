@@ -207,7 +207,7 @@ export function renderKit(user, connections, { origin, host, viewer, print }) {
       <div class="kit-intro">
         <h1>${e(user.display_name)}</h1>
         ${user.bio ? `<p class="bio">${e(user.bio)}</p>` : ''}
-        ${games ? `<ul class="games" aria-label="Games">${games}</ul>` : ''}
+        ${games ? `<ul class="games" aria-label="Games and topics">${games}</ul>` : ''}
         ${contact}
       </div>
     </section>
