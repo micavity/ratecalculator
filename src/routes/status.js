@@ -19,5 +19,7 @@ export async function onRequestGet({ env }) {
       GOOGLE_CLIENT_SECRET: Boolean(env.GOOGLE_CLIENT_SECRET),
       YOUTUBE_API_KEY: Boolean(env.YOUTUBE_API_KEY),
     },
+    // Names only (quoted, so stray spaces show up), never values
+    names: Object.keys(env).map((name) => JSON.stringify(name)),
   });
 }
