@@ -1589,12 +1589,15 @@ async function loadDeals() {
   if (data.locked) {
     renderDealsLocked(data.saved);
     loadInvoices();
+    setupPitches();
     return;
   }
   deals = data.deals;
   dealCurrencies = data.currencies;
   await loadInvoices();
   renderDeals();
+  renderBrandSuggestions();
+  setupPitches();
 }
 
 // Kit brands are saved as "Name, https://link" lines
@@ -1987,6 +1990,162 @@ document.getElementById('deleteInvoice').addEventListener('click', async () => {
     invoiceError.hidden = false;
   }
 });
+
+// Pitch templates (Pro): emails filled in from the creator's own stats
+
+const pitchPanel = document.getElementById('pitchPanel');
+const pitchTemplate = document.getElementById('pitchTemplate');
+const pitchBrand = document.getElementById('pitchBrand');
+const pitchContact = document.getElementById('pitchContact');
+const pitchSubject = document.getElementById('pitchSubject');
+const pitchText = document.getElementById('pitchText');
+
+// The creator's details as the templates use them
+function pitchFacts(brand) {
+  const p = state.profile;
+  const stats = topStats().map(([label, value]) => `${compact.format(Number(value))} ${label.replace(/^Avg /, 'average ')}`);
+  const topics = String(p.games || '').split(',').map((g) => g.trim()).filter(Boolean).slice(0, 3);
+  // A tracked link for this brand, if there is one, so the creator sees when they open it
+  const link = trackedLinks.find((l) => brand && l.label.toLowerCase() === brand.toLowerCase());
+  const rateLines = ratesSummary.split('\n').slice(1).filter((l) => l.startsWith('- ') || /^[A-Z]/.test(l)).filter((l) => !l.startsWith('Media kit:'));
+  return {
+    name: p.displayName,
+    stats: stats.length ? stats.join(', ') : '',
+    topics: topics.length ? topics.join(', ') : 'my niche',
+    kit: link ? kitLink(link.versionKey, link.id) : kitUrl(),
+    // A blank line before each platform heading
+    rates: rateLines.map((l, i) => (i && !l.startsWith('- ') ? `\n${l}` : l)).join('\n').trim(),
+    email: p.contactEmail,
+  };
+}
+
+const PITCHES = {
+  cold: {
+    name: 'First pitch to a new brand',
+    subject: (f, b) => `Partnership idea: ${f.name} x ${b}`,
+    body: (f, b, hi) => `${hi}
+
+I'm ${f.name}, a creator covering ${f.topics}.${f.stats ? ` My community: ${f.stats}.` : ''}
+
+I'm a big fan of ${b} and think my audience would be a great fit. I'd love to put together a sponsored video or stream that shows off what you do in a way that feels natural to my viewers.
+
+My media kit has my verified stats, audience and past partners:
+${f.kit}
+
+Would you be open to a quick chat about a campaign? Happy to work around your goals and budget.
+
+Thanks,
+${f.name}`,
+  },
+  followup: {
+    name: 'Follow-up (no reply yet)',
+    subject: (f, b) => `Following up: ${f.name} x ${b}`,
+    body: (f, b, hi) => `${hi}
+
+Just following up on my earlier note about working together. I know inboxes get busy!
+
+Here's my media kit again with my latest stats:
+${f.kit}
+
+If now isn't the right time, no problem. Is there someone else on your team I should reach out to, or a better time to check back in?
+
+Thanks,
+${f.name}`,
+  },
+  rates: {
+    name: 'Reply with my rates',
+    subject: (f, b) => `Rates for ${b}: ${f.name}`,
+    body: (f, b, hi) => `${hi}
+
+Thanks for reaching out, I'd love to work with ${b}! Here are my current rates:
+
+${f.rates || '[Add your rates here]'}
+
+Everything is in my media kit, including my stats and audience:
+${f.kit}
+
+Packages and multi-platform bundles are available, and I'm happy to put together something that fits your campaign. What deliverables and timing did you have in mind?
+
+Thanks,
+${f.name}`,
+  },
+  recap: {
+    name: 'Thank-you and results after a campaign',
+    subject: (f, b) => `Thank you, and campaign results: ${f.name} x ${b}`,
+    body: (f, b, hi) => `${hi}
+
+Thanks again for partnering with me on this campaign, it was a pleasure working with ${b}!
+
+Here's a quick recap:
+- Content: [what you posted, with links]
+- Views so far: [number]
+- Clicks / code uses: [if you have them]
+- Community response: [a highlight or two]
+
+I'd love to keep building on this. If you're planning future campaigns, I'm happy to put together an ongoing package.
+
+My updated media kit:
+${f.kit}
+
+Thanks,
+${f.name}`,
+  },
+  return: {
+    name: 'Reconnect with a past brand',
+    subject: (f, b) => `Working together again? ${f.name} x ${b}`,
+    body: (f, b, hi) => `${hi}
+
+Hope all's well at ${b}! I really enjoyed our last collaboration, and my channel has kept growing since then${f.stats ? `: ${f.stats}` : ''}.
+
+I'd love to team up again for an upcoming launch or campaign. Here's my latest media kit:
+${f.kit}
+
+Is there anything coming up that I could help with?
+
+Thanks,
+${f.name}`,
+  },
+};
+
+function renderPitch() {
+  const brand = pitchBrand.value.trim() || '[Brand]';
+  const hi = pitchContact.value.trim() ? `Hi ${pitchContact.value.trim()},` : `Hi ${brand} team,`;
+  const template = PITCHES[pitchTemplate.value] || PITCHES.cold;
+  const facts = pitchFacts(pitchBrand.value.trim());
+  pitchSubject.value = template.subject(facts, brand);
+  pitchText.value = template.body(facts, brand, hi);
+  const deal = deals.find((d) => d.brand.toLowerCase() === pitchBrand.value.trim().toLowerCase());
+  const to = deal?.contactEmail || '';
+  document.getElementById('mailPitch').href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(pitchSubject.value)}&body=${encodeURIComponent(pitchText.value)}`;
+}
+
+function setupPitches() {
+  const locked = !state.limits.pro;
+  pitchPanel.classList.toggle('locked', locked);
+  pitchPanel.querySelectorAll('input, select, textarea, button, a').forEach((c) => {
+    if ('disabled' in c) c.disabled = locked;
+  });
+  document.getElementById('mailPitch').hidden = locked;
+  if (!pitchTemplate.options.length) {
+    pitchTemplate.replaceChildren(...Object.entries(PITCHES).map(([key, t]) => el('option', { value: key, text: t.name })));
+  }
+  if (locked) {
+    pitchSubject.value = 'Partnership idea: you x your next sponsor';
+    pitchText.value = 'Pro writes ready-to-send pitch emails for you, with your stats, rates and media kit link filled in: first pitches, follow-ups, rate replies, campaign recaps and more.';
+    return;
+  }
+  renderPitch();
+}
+
+[pitchTemplate, pitchBrand, pitchContact].forEach((input) => input.addEventListener('input', renderPitch));
+pitchBrand.addEventListener('change', () => {
+  // Fill the contact's first name from a deal with this brand
+  const deal = deals.find((d) => d.brand.toLowerCase() === pitchBrand.value.trim().toLowerCase());
+  if (deal?.contactName && !pitchContact.value) pitchContact.value = deal.contactName.split(' ')[0];
+  renderPitch();
+});
+document.getElementById('copyPitch').addEventListener('click', (event) => copyText(pitchText.value, event.target));
+document.getElementById('copyPitchSubject').addEventListener('click', (event) => copyText(pitchSubject.value, event.target));
 
 // Referral program
 
