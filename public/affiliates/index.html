@@ -57,13 +57,17 @@
     <section class="home-section">
       <div class="panel estimator">
         <h2>What could you earn?</h2>
-        <label for="referrals">Creators you refer who subscribe to Essential: <strong id="referralCount">20</strong></label>
+        <div class="billing-toggle" role="radiogroup" aria-label="Plan your referrals subscribe to">
+          <label><input type="radio" name="plan" value="essential" checked> Essential</label>
+          <label><input type="radio" name="plan" value="pro"> Pro</label>
+        </div>
+        <label for="referrals">Creators you refer who subscribe to <span id="planName">Essential</span>: <strong id="referralCount">20</strong></label>
         <input type="range" id="referrals" min="1" max="200" value="20">
         <div class="estimate-results">
           <div class="stat"><span class="stat-value" id="perMonth">$25</span><span class="stat-label">per month</span></div>
           <div class="stat"><span class="stat-value" id="perYear">$300</span><span class="stat-label">over 12 months</span></div>
         </div>
-        <p class="small muted">Based on monthly Essential at $4.99. Referred creators pay 20% less for their first 3 months, so you earn a little less in those months. Yearly subscribers earn you about $12.50 each up front.</p>
+        <p class="small muted" id="estimateNote">Based on monthly Essential at $4.99. Referred creators pay 20% less for their first 3 months, so you earn a little less in those months. Yearly subscribers earn you about $12.50 each up front.</p>
       </div>
     </section>
 
@@ -79,7 +83,7 @@
       </details>
       <details>
         <summary>What do the people I refer get?</summary>
-        <p>20% off their first 3 months of Essential. It's applied automatically when they sign up through your link, or they can type your code at checkout.</p>
+        <p>20% off their first 3 months of Essential or Pro. It's applied automatically when they sign up through your link, or they can type your code at checkout.</p>
       </details>
       <details>
         <summary>Do I have to say I earn from it?</summary>
@@ -107,17 +111,26 @@
   <script>
     document.querySelectorAll('.year').forEach((el) => { el.textContent = new Date().getFullYear(); });
 
-    // 25% of $4.99 a month for each subscriber
+    // 25% of each subscriber's monthly price
+    const PLANS = {
+      essential: { name: 'Essential', month: 4.99, year: 49.99 },
+      pro: { name: 'Pro', month: 9.99, year: 99.99 },
+    };
     const slider = document.getElementById('referrals');
     const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+    const cents = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
     function update() {
+      const plan = PLANS[document.querySelector('input[name="plan"]:checked').value];
       const n = Number(slider.value);
-      const monthly = n * 4.99 * 0.25;
+      const monthly = n * plan.month * 0.25;
+      document.getElementById('planName').textContent = plan.name;
+      document.getElementById('estimateNote').textContent = `Based on monthly ${plan.name} at ${cents.format(plan.month)}. Referred creators pay 20% less for their first 3 months, so you earn a little less in those months. Yearly ${plan.name} subscribers earn you about ${cents.format(plan.year * 0.25)} each up front.`;
       document.getElementById('referralCount').textContent = n;
       document.getElementById('perMonth').textContent = usd.format(monthly);
       document.getElementById('perYear').textContent = usd.format(monthly * 12);
     }
     slider.addEventListener('input', update);
+    document.querySelectorAll('input[name="plan"]').forEach((input) => input.addEventListener('change', update));
     update();
   </script>
 </body>

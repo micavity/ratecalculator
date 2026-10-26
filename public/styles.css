@@ -1681,3 +1681,5 @@ html[data-kit-style="gradient"] body {
   .invoice { border: 0; padding: 0; }
   .invoice-stamp, .invoice-dates .overdue { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }
+
+.estimator .billing-toggle { margin: 0 0 14px; }
