@@ -1388,18 +1388,18 @@ function dueText(label, day) {
 function dealBadges(d) {
   const badges = [];
   if (['pitched', 'negotiating', 'agreed'].includes(d.stage) && d.dueDate) {
-    badges.push([dueText('Content', d.dueDate), daysUntil(d.dueDate) <= 2 ? 'badge-warning' : '']);
+    badges.push([dueText('Content', d.dueDate), daysUntil(d.dueDate) <= 2 ? 'deal-badge-warning' : '']);
   }
   if (['agreed', 'delivered'].includes(d.stage) && d.paymentDue) {
-    badges.push([dueText('Payment', d.paymentDue), daysUntil(d.paymentDue) < 0 ? 'badge-warning' : '']);
+    badges.push([dueText('Payment', d.paymentDue), daysUntil(d.paymentDue) < 0 ? 'deal-badge-warning' : '']);
   }
-  if (d.stage === 'paid' && d.paidOn) badges.push([`Paid ${shortDate(d.paidOn)}`, 'badge-good']);
+  if (d.stage === 'paid' && d.paidOn) badges.push([`Paid ${shortDate(d.paidOn)}`, 'deal-badge-good']);
   if (d.lastOpenedAt && !['paid', 'lost'].includes(d.stage)) {
-    badges.push([`Opened your kit ${relativeTime(d.lastOpenedAt)}`, 'badge-good']);
+    badges.push([`Opened your kit ${relativeTime(d.lastOpenedAt)}`, 'deal-badge-good']);
   } else if (d.linkLabel && !['paid', 'lost'].includes(d.stage)) {
     badges.push(['Kit link not opened yet', '']);
   }
-  return badges.map(([text, kind]) => el('span', { class: `badge ${kind}`, text }));
+  return badges.map(([text, kind]) => el('span', { class: `deal-badge ${kind}`, text }));
 }
 
 function dealSummary() {

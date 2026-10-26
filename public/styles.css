@@ -1497,7 +1497,7 @@ html[data-kit-style="gradient"] body {
 
 .deal-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 
-.badge {
+.deal-badge {
   padding: 1px 8px;
   border-radius: 999px;
   font-size: 0.75rem;
@@ -1507,8 +1507,8 @@ html[data-kit-style="gradient"] body {
   color: var(--muted);
 }
 
-.badge-warning { color: #e11d48; border-color: rgba(225, 29, 72, 0.5); }
-.badge-good { color: var(--good); border-color: var(--good); }
+.deal-badge-warning { color: #e11d48; border-color: rgba(225, 29, 72, 0.5); }
+.deal-badge-good { color: var(--good); border-color: var(--good); }
 
 .stage-pitched { --stage: #64748b; }
 .stage-negotiating { --stage: #3b82f6; }
