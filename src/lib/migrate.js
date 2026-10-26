@@ -177,6 +177,13 @@ export const MIGRATIONS = [
     'ALTER TABLE users ADD COLUMN gift_expires INTEGER',
     "UPDATE users SET gift_plan = plan, gift_expires = plan_expires WHERE plan_source = 'gift'",
   ],
+  // 7: self-reported Instagram, Facebook and X stats
+  ['instagram', 'facebook', 'x'].flatMap((p) => [
+    `ALTER TABLE users ADD COLUMN ${p}_handle TEXT`,
+    `ALTER TABLE users ADD COLUMN ${p}_followers INTEGER`,
+    `ALTER TABLE users ADD COLUMN ${p}_avg_views INTEGER`,
+    `ALTER TABLE users ADD COLUMN ${p}_engagement REAL`,
+  ]),
 ];
 
 let ready = null;

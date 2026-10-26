@@ -25,6 +25,15 @@ function readInput() {
     ytEngagement: value('ytEngagement'),
     ttViews: value('ttViews'),
     ttEngagement: value('ttEngagement'),
+    igFollowers: value('igFollowers'),
+    igViews: value('igViews'),
+    igEngagement: value('igEngagement'),
+    fbFollowers: value('fbFollowers'),
+    fbViews: value('fbViews'),
+    fbEngagement: value('fbEngagement'),
+    xFollowers: value('xFollowers'),
+    xViews: value('xViews'),
+    xEngagement: value('xEngagement'),
   };
 }
 

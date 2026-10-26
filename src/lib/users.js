@@ -7,6 +7,7 @@ import {
 } from './kit-content.js';
 import { withVideoStats } from './video-stats.js';
 import { PLAN_RANK, effectivePlan, planLimits } from './plans.js';
+import { SOCIALS, SOCIAL_COLUMNS, cleanHandle } from './socials.js';
 
 // Paths that can't be used as media kit links
 export const RESERVED_SLUGS = new Set([
@@ -62,6 +63,7 @@ export const USER_DATA_TABLES = ['kit_views', 'kit_sources', 'kit_countries', 'l
 const MERGE_FIELDS = [
   'avatar_url', 'bio', 'games', 'contact_email', 'twitch_avg_viewers',
   'tiktok_handle', 'tiktok_followers', 'tiktok_avg_views', 'tiktok_engagement',
+  ...SOCIAL_COLUMNS,
 ];
 
 /**
@@ -285,6 +287,12 @@ export function profileFields(user) {
     tiktokFollowers: user.tiktok_followers,
     tiktokAvgViews: user.tiktok_avg_views,
     tiktokEngagement: user.tiktok_engagement,
+    ...Object.fromEntries(SOCIALS.flatMap((s) => [
+      [`${s.field}Handle`, user[`${s.key}_handle`]],
+      [`${s.field}Followers`, user[`${s.key}_followers`]],
+      [`${s.field}AvgViews`, user[`${s.key}_avg_views`]],
+      [`${s.field}Engagement`, user[`${s.key}_engagement`]],
+    ])),
     featured: parseJson(user.featured, []).map((v) => v.url),
     brands: brandsToText(parseJson(user.brands, [])),
     audience: parseJson(user.audience, {}),
@@ -342,6 +350,11 @@ export function validateProfile(body) {
     ['tiktok_followers', 'tiktokFollowers', { min: 0, max: 1_000_000_000, integer: true }],
     ['tiktok_avg_views', 'tiktokAvgViews', { min: 0, max: 1_000_000_000, integer: true }],
     ['tiktok_engagement', 'tiktokEngagement', { min: 0, max: 100 }],
+    ...SOCIALS.flatMap((s) => [
+      [`${s.key}_followers`, `${s.field}Followers`, { min: 0, max: 5_000_000_000, integer: true }],
+      [`${s.key}_avg_views`, `${s.field}AvgViews`, { min: 0, max: 5_000_000_000, integer: true }],
+      [`${s.key}_engagement`, `${s.field}Engagement`, { min: 0, max: 100 }],
+    ]),
   ];
   for (const [column, field, limits] of numbers) {
     const result = optionalNumber(body[field], limits);
@@ -356,6 +369,11 @@ export function validateProfile(body) {
   values.tiktok_handle = text(body.tiktokHandle, 30).replace(/^@/, '');
   if (values.tiktok_handle && !/^[A-Za-z0-9_.]{2,24}$/.test(values.tiktok_handle)) {
     return fail('tiktokHandle', 'Enter a valid TikTok username.');
+  }
+  for (const s of SOCIALS) {
+    const handle = cleanHandle(body[`${s.field}Handle`]);
+    if (handle && !s.handle.test(handle)) return fail(`${s.field}Handle`, `Enter a valid ${s.name} username.`);
+    values[`${s.key}_handle`] = handle;
   }
 
   const featured = parseFeatured(body.featured);
@@ -430,6 +448,9 @@ export function rateInput(user, connections) {
   if (user.twitch_avg_viewers) platforms.push('twitch');
   if (connections.youtube) platforms.push('youtube');
   if (user.tiktok_avg_views) platforms.push('tiktok');
+  for (const s of SOCIALS) {
+    if (user[`${s.key}_followers`] || user[`${s.key}_avg_views`]) platforms.push(s.key);
+  }
   const yt = connections.youtube?.stats || {};
   return {
     platforms,
@@ -442,6 +463,11 @@ export function rateInput(user, connections) {
     ytEngagement: yt.engagement,
     ttViews: user.tiktok_avg_views,
     ttEngagement: user.tiktok_engagement,
+    ...Object.fromEntries(SOCIALS.flatMap((s) => [
+      [`${s.rateKey}Followers`, user[`${s.key}_followers`]],
+      [`${s.rateKey}Views`, user[`${s.key}_avg_views`]],
+      [`${s.rateKey}Engagement`, user[`${s.key}_engagement`]],
+    ])),
   };
 }
 

@@ -58,7 +58,7 @@ Free media kits and sponsorship rate estimates for creators. Built for gaming cr
 
 ### Product choices
 
-- Sign-in is Twitch or YouTube only (proves channel ownership). TikTok stats are typed in and shown as "self-reported".
+- Sign-in is Twitch or YouTube only (proves channel ownership). TikTok, Instagram, Facebook and X stats are typed in and shown as "self-reported" (platform list in `src/lib/socials.js`).
 - Twitch doesn't share average viewers, so creators enter it (self-reported). Twitch followers and all YouTube stats are verified.
 - Rate estimates are industry rules of thumb, adjusted by region, engagement and niche (gaming plus 15 other niches, multipliers in `public/rates.js`). They're labeled as estimates everywhere.
 - Kit views ignore bots, link previews and the creator's own visits. We store the referring site and country, never IP addresses.
@@ -76,9 +76,10 @@ Free media kits and sponsorship rate estimates for creators. Built for gaming cr
 - Admin page: creator search, plan gifting, Founding Creator badge, site stats, affiliates and payouts
 - Privacy Policy and Terms (cover YouTube data, billing and referrals), account deletion
 - `robots.txt` and `sitemap.xml`
-- Daily stat snapshots (saved by the cron job, `src/lib/snapshots.js`), the start of Pro's growth charts. YouTube rows are deleted after 30 days (YouTube's rules); Twitch and TikTok rows are kept. Long-term YouTube history would need the YouTube Analytics API.
+- Daily stat snapshots (saved by the cron job, `src/lib/snapshots.js`), the start of Pro's growth charts. YouTube rows are deleted after 30 days (YouTube's rules); Twitch rows and typed-in platforms are kept. Long-term YouTube history would need the YouTube Analytics API.
 - "Complete your kit" checklist at the top of the dashboard Overview (hideable, disappears when done)
 - **Pro plan setup:** Pro checkout, "Switch to Pro" for Essential subscribers (charges the difference now, same renewal date), gifts remembered so they come back when a paid plan ends, Pro card on `/pricing/` that switches on by itself once Pro's prices are set
+- **Instagram, Facebook and X** (self-reported): stats on the dashboard, kit cards, rate estimates (Reels, posts, Stories, videos, X posts) and the calculator
 - **Deal tracker (Pro):** Deals tab with stages (Pitched → Negotiating → Agreed → Delivered → Paid, or Lost), amounts in 15 currencies, deliverables, content and payment due dates with overdue alerts, totals (earned this month, owed, pipeline), brand autofill from earlier deals and the kit's brand list, brand logos, and "Start a deal" from tracked links (deals show when the brand opens the kit). Deals are kept, hidden, if Pro lapses, and move over when profiles merge.
 
 ### Waiting on / to do outside the code

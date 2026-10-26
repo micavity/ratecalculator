@@ -32,6 +32,13 @@ const MESSAGES = {
   failed: 'Something went wrong. Please try again.',
 };
 
+// Platforms with stats the creator types in (matches src/lib/socials.js)
+const SOCIALS = [
+  { key: 'instagram', rateKey: 'ig', name: 'Instagram' },
+  { key: 'facebook', rateKey: 'fb', name: 'Facebook' },
+  { key: 'x', rateKey: 'x', name: 'X' },
+];
+
 const number = new Intl.NumberFormat('en-US');
 const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
 let state;
@@ -122,6 +129,9 @@ function rateInput() {
   if (Number(p.twitchAvgViewers)) platforms.push('twitch');
   if (state.connections.youtube) platforms.push('youtube');
   if (Number(p.tiktokAvgViews)) platforms.push('tiktok');
+  for (const s of SOCIALS) {
+    if (Number(p[`${s.key}Followers`]) || Number(p[`${s.key}AvgViews`])) platforms.push(s.key);
+  }
   return {
     platforms,
     region: p.region,
@@ -133,6 +143,11 @@ function rateInput() {
     ytEngagement: yt.engagement,
     ttViews: p.tiktokAvgViews,
     ttEngagement: p.tiktokEngagement,
+    ...Object.fromEntries(SOCIALS.flatMap((s) => [
+      [`${s.rateKey}Followers`, p[`${s.key}Followers`]],
+      [`${s.rateKey}Views`, p[`${s.key}AvgViews`]],
+      [`${s.rateKey}Engagement`, p[`${s.key}Engagement`]],
+    ])),
   };
 }
 
@@ -208,7 +223,11 @@ function topStats() {
     ['Avg YouTube views', c.youtube?.stats.avgViews],
     ['TikTok followers', p.tiktokFollowers],
     ['Avg TikTok views', p.tiktokAvgViews],
-  ].filter(([, v]) => Number(v) > 0).slice(0, 3);
+    ...SOCIALS.map((s) => [`${s.name} followers`, p[`${s.key}Followers`]]),
+  ].filter(([, v]) => Number(v) > 0)
+    // The biggest numbers make the best share card
+    .sort((a, b) => Number(b[1]) - Number(a[1]))
+    .slice(0, 3);
 }
 
 function drawShareImage() {

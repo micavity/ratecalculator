@@ -5,6 +5,7 @@ import {
   THEMES, ESSENTIAL_THEMES, AGE_GROUPS, isHexColor, normalizeSections, hasAudience, parseJson,
 } from './kit-content.js';
 import { planLimits } from './plans.js';
+import { SOCIALS } from './socials.js';
 import { isReferralCode } from './referrals.js';
 
 const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
@@ -195,9 +196,19 @@ export function renderKit(user, connections, { origin, host, viewer, print, path
       stat('Avg views', count(user.tiktok_avg_views), 'Self-reported'),
       stat('Engagement', user.tiktok_engagement != null ? `${user.tiktok_engagement}%` : null, 'Self-reported'),
     ]),
+    ...SOCIALS.map((s) => {
+      const handle = user[`${s.key}_handle`];
+      const engagement = user[`${s.key}_engagement`];
+      return platformCard(s.name, handle && { url: s.url(handle), label: s.key === 'facebook' ? `facebook.com/${handle}` : `@${handle}` }, false, [
+        stat('Followers', count(user[`${s.key}_followers`]), 'Self-reported'),
+        stat(s.viewsLabel, count(user[`${s.key}_avg_views`]), 'Self-reported'),
+        stat('Engagement', engagement != null ? `${engagement}%` : null, 'Self-reported'),
+      ]);
+    }),
   ].join('');
 
-  const audienceTotal = (twitch?.stats.followers || 0) + (yt.subscribers || 0) + (user.tiktok_followers || 0);
+  const audienceTotal = (twitch?.stats.followers || 0) + (yt.subscribers || 0) + (user.tiktok_followers || 0)
+    + SOCIALS.reduce((sum, s) => sum + (user[`${s.key}_followers`] || 0), 0);
 
   let rates = '';
   if (user.show_rates) {

@@ -2,7 +2,7 @@
 
 **Know your worth. Land the deal.**
 
-Free sponsorship rate calculator and media kits for gaming creators on Twitch, YouTube and TikTok.
+Free sponsorship rate calculator and media kits for creators on Twitch, YouTube, TikTok, Instagram, Facebook and X.
 
 Runs entirely on Cloudflare: a Worker with static assets, plus D1 for the database.
 
@@ -94,4 +94,7 @@ The rate ranges and multipliers are at the top of `public/rates.js`. They're bas
 - **YouTube:** price per 1,000 average views (integration, dedicated video, Shorts)
 - **Twitch:** price per average concurrent viewer, per hour
 - **TikTok:** price per 1,000 average views
+- **Instagram:** Reels per 1,000 average views; feed posts and Stories per 1,000 followers
+- **Facebook:** videos per 1,000 average views; posts per 1,000 followers
+- **X:** per 1,000 average views per post (or per 1,000 followers if views aren't given)
 - Adjusted for engagement rate, audience region and niche (gaming plus finance, beauty, lifestyle and more)

@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Free Sponsorship Rate Calculator · CreatorGG</title>
-  <meta name="description" content="Free sponsorship rate calculator for creators on Twitch, YouTube and TikTok, built for gaming and every other niche. Find out what to charge for sponsored streams, videos and posts.">
+  <meta name="description" content="Free sponsorship rate calculator for creators on Twitch, YouTube, TikTok, Instagram, Facebook and X, built for gaming and every other niche. Find out what to charge for sponsored streams, videos and posts on Twitch, YouTube, TikTok, Instagram, Facebook and X.">
   <meta property="og:title" content="Free sponsorship rate calculator · CreatorGG">
-  <meta property="og:description" content="Free sponsorship rate calculator for gaming creators on Twitch, YouTube and TikTok.">
+  <meta property="og:description" content="Free sponsorship rate calculator for creators on Twitch, YouTube, TikTok, Instagram, Facebook and X.">
   <meta property="og:type" content="website">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/styles.css">
@@ -28,7 +28,7 @@
     <section class="hero">
       <p class="eyebrow">Free sponsorship rate calculator</p>
       <h1>Know your worth. Land the deal.</h1>
-      <p>Find out what to charge for sponsored streams, videos and posts. Enter your stats and get an estimate in seconds. Built for gaming creators, and works for any niche. Free, no sign-up.</p>
+      <p>Find out what to charge for sponsored streams, videos and posts on Twitch, YouTube, TikTok, Instagram, Facebook and X. Enter your stats and get an estimate in seconds. Built for gaming creators, and works for any niche. Free, no sign-up.</p>
     </section>
 
     <div class="layout">
@@ -38,6 +38,9 @@
           <label class="chip"><input type="checkbox" name="platform" value="twitch" checked> Twitch</label>
           <label class="chip"><input type="checkbox" name="platform" value="youtube" checked> YouTube</label>
           <label class="chip"><input type="checkbox" name="platform" value="tiktok"> TikTok</label>
+          <label class="chip"><input type="checkbox" name="platform" value="instagram"> Instagram</label>
+          <label class="chip"><input type="checkbox" name="platform" value="facebook"> Facebook</label>
+          <label class="chip"><input type="checkbox" name="platform" value="x"> X (Twitter)</label>
         </fieldset>
 
         <fieldset class="group" data-platform="twitch">
@@ -75,6 +78,51 @@
           <label>Engagement rate % <span class="opt">optional</span>
             <input type="number" name="ttEngagement" min="0" max="100" step="0.1" inputmode="decimal" placeholder="e.g. 6">
             <small>(Likes + comments + shares) ÷ views × 100. About 6% is typical.</small>
+          </label>
+        </fieldset>
+
+        <fieldset class="group" data-platform="instagram">
+          <legend>Instagram</legend>
+          <label>Followers
+            <input type="number" name="igFollowers" min="0" inputmode="numeric" placeholder="e.g. 25000">
+          </label>
+          <label>Average views per Reel <span class="opt">optional</span>
+            <input type="number" name="igViews" min="0" inputmode="numeric" placeholder="e.g. 10000">
+            <small>Average of your last 10–20 Reels, from Instagram's Professional dashboard.</small>
+          </label>
+          <label>Engagement rate % <span class="opt">optional</span>
+            <input type="number" name="igEngagement" min="0" max="100" step="0.1" inputmode="decimal" placeholder="e.g. 3">
+            <small>(Likes + comments) ÷ followers × 100. About 3% is typical.</small>
+          </label>
+        </fieldset>
+
+        <fieldset class="group" data-platform="facebook">
+          <legend>Facebook</legend>
+          <label>Page or profile followers
+            <input type="number" name="fbFollowers" min="0" inputmode="numeric" placeholder="e.g. 50000">
+          </label>
+          <label>Average views per video <span class="opt">optional</span>
+            <input type="number" name="fbViews" min="0" inputmode="numeric" placeholder="e.g. 8000">
+            <small>Average of your recent videos and Reels, from Meta Business Suite.</small>
+          </label>
+          <label>Engagement rate % <span class="opt">optional</span>
+            <input type="number" name="fbEngagement" min="0" max="100" step="0.1" inputmode="decimal" placeholder="e.g. 2">
+            <small>(Reactions + comments + shares) ÷ reach × 100. About 2% is typical.</small>
+          </label>
+        </fieldset>
+
+        <fieldset class="group" data-platform="x">
+          <legend>X (Twitter)</legend>
+          <label>Followers
+            <input type="number" name="xFollowers" min="0" inputmode="numeric" placeholder="e.g. 20000">
+          </label>
+          <label>Average views per post <span class="opt">optional, but more accurate</span>
+            <input type="number" name="xViews" min="0" inputmode="numeric" placeholder="e.g. 5000">
+            <small>The view count shown under your recent posts. Leave out one-off viral posts.</small>
+          </label>
+          <label>Engagement rate % <span class="opt">optional</span>
+            <input type="number" name="xEngagement" min="0" max="100" step="0.1" inputmode="decimal" placeholder="e.g. 1">
+            <small>Engagements ÷ views × 100, from X's analytics. About 1% is typical.</small>
           </label>
         </fieldset>
 

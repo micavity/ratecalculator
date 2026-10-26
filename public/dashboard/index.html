@@ -355,7 +355,7 @@
       </fieldset>
 
       <h2>Stats you enter</h2>
-      <p class="muted small">Twitch doesn't share average viewers and TikTok doesn't share stats with apps like ours, so add these yourself. They're marked "self-reported" on your kit.</p>
+      <p class="muted small">Twitch doesn't share average viewers, and TikTok, Instagram, Facebook and X don't share stats with apps like ours, so add these yourself. They're marked "self-reported" on your kit. Leave blank any platform you don't use.</p>
       <fieldset class="group">
         <legend>Twitch</legend>
         <label>Average concurrent viewers
@@ -380,6 +380,60 @@
         <label>Engagement rate %
           <input type="number" name="tiktokEngagement" min="0" max="100" step="0.1" inputmode="decimal">
         </label>
+      </fieldset>
+      <fieldset class="group">
+        <legend>Instagram</legend>
+        <label>Username
+          <input type="text" name="instagramHandle" maxlength="100" placeholder="@yourname">
+        </label>
+        <div class="field-row">
+          <label>Followers
+            <input type="number" name="instagramFollowers" min="0" inputmode="numeric">
+          </label>
+          <label>Avg Reel views
+            <input type="number" name="instagramAvgViews" min="0" inputmode="numeric">
+          </label>
+          <label>Engagement rate %
+            <input type="number" name="instagramEngagement" min="0" max="100" step="0.1" inputmode="decimal">
+          </label>
+        </div>
+        <small>Reel views from your last 10–20 Reels, in Instagram's Professional dashboard.</small>
+      </fieldset>
+      <fieldset class="group">
+        <legend>Facebook</legend>
+        <label>Username
+          <input type="text" name="facebookHandle" maxlength="100" placeholder="Page username, e.g. yourpage">
+        </label>
+        <div class="field-row">
+          <label>Followers
+            <input type="number" name="facebookFollowers" min="0" inputmode="numeric">
+          </label>
+          <label>Avg video views
+            <input type="number" name="facebookAvgViews" min="0" inputmode="numeric">
+          </label>
+          <label>Engagement rate %
+            <input type="number" name="facebookEngagement" min="0" max="100" step="0.1" inputmode="decimal">
+          </label>
+        </div>
+        <small>Followers of your page or profile, and average views of your recent videos in Meta Business Suite.</small>
+      </fieldset>
+      <fieldset class="group">
+        <legend>X (Twitter)</legend>
+        <label>Username
+          <input type="text" name="xHandle" maxlength="100" placeholder="@yourname">
+        </label>
+        <div class="field-row">
+          <label>Followers
+            <input type="number" name="xFollowers" min="0" inputmode="numeric">
+          </label>
+          <label>Avg views per post
+            <input type="number" name="xAvgViews" min="0" inputmode="numeric">
+          </label>
+          <label>Engagement rate %
+            <input type="number" name="xEngagement" min="0" max="100" step="0.1" inputmode="decimal">
+          </label>
+        </div>
+        <small>Average views (impressions) of your recent posts, shown under each post or in X's analytics.</small>
       </fieldset>
 
       <h2>Rates</h2>

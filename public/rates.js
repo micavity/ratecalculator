@@ -7,6 +7,14 @@ const RATES = {
   ytDedicated: [25, 50],
   ytShort: [2, 6],
   tiktok: [8, 20],
+  igReel: [15, 35],
+  fbVideo: [8, 18],
+  xPost: [8, 20],
+  // Per 1,000 followers, for posts priced by reach rather than views
+  igPost: [3, 8],
+  igStories: [1.5, 4],
+  fbPost: [0.5, 1.5],
+  xPostByFollowers: [1.5, 4],
   // Per average concurrent viewer, per hour
   twitchHourly: [0.75, 2],
   // Per average concurrent viewer, for a whole stream
@@ -14,7 +22,7 @@ const RATES = {
 };
 
 // Typical engagement rates, used to scale prices up or down
-const ENGAGEMENT_BENCHMARK = { youtube: 4, tiktok: 6 };
+const ENGAGEMENT_BENCHMARK = { youtube: 4, tiktok: 6, instagram: 3, facebook: 2, x: 1 };
 
 export const REGION_MULTIPLIER = { tier1: 1, mixed: 0.8, other: 0.6 };
 // How much brands typically pay in each niche, relative to general gaming.
@@ -84,9 +92,10 @@ export function formatRange([low, high]) {
 }
 
 /**
- * input: { platforms: ['twitch', 'youtube', 'tiktok'], region, focus,
+ * input: { platforms: ['twitch', 'youtube', 'tiktok', 'instagram', 'facebook', 'x'], region, focus,
  *   twitchViewers, twitchHours, ytViews, ytShortsViews, ytEngagement,
- *   ttViews, ttEngagement }
+ *   ttViews, ttEngagement, igFollowers, igViews, igEngagement,
+ *   fbFollowers, fbViews, fbEngagement, xFollowers, xViews, xEngagement }
  * Returns { sections: [{ name, rates: [[label, [low, high]]] }], bundle: [low, high] | null }
  */
 export function estimateRates(input) {
@@ -145,6 +154,53 @@ export function estimateRates(input) {
         ],
       });
       bundleParts.push(video);
+    }
+  }
+
+  if (platforms.includes('instagram')) {
+    const followers = positive(input.igFollowers) / 1000;
+    const views = positive(input.igViews) / 1000;
+    const mult = base * engagementMultiplier(positive(input.igEngagement), ENGAGEMENT_BENCHMARK.instagram);
+    const rates = [];
+    if (views) rates.push(['Sponsored Reel', scale(RATES.igReel, views, mult)]);
+    if (followers) {
+      rates.push(['Feed post or carousel', scale(RATES.igPost, followers, mult)]);
+      rates.push(['Story set (3 frames)', scale(RATES.igStories, followers, mult)]);
+    }
+    if (rates.length) {
+      sections.push({ name: 'Instagram', rates });
+      bundleParts.push(rates[0][1]);
+    }
+  }
+
+  if (platforms.includes('facebook')) {
+    const followers = positive(input.fbFollowers) / 1000;
+    const views = positive(input.fbViews) / 1000;
+    const mult = base * engagementMultiplier(positive(input.fbEngagement), ENGAGEMENT_BENCHMARK.facebook);
+    const rates = [];
+    if (views) rates.push(['Sponsored video', scale(RATES.fbVideo, views, mult)]);
+    if (followers) rates.push(['Sponsored post', scale(RATES.fbPost, followers, mult)]);
+    if (rates.length) {
+      sections.push({ name: 'Facebook', rates });
+      bundleParts.push(rates[0][1]);
+    }
+  }
+
+  if (platforms.includes('x')) {
+    const followers = positive(input.xFollowers) / 1000;
+    const views = positive(input.xViews) / 1000;
+    const mult = base * engagementMultiplier(positive(input.xEngagement), ENGAGEMENT_BENCHMARK.x);
+    // Average views per post is the better measure; followers is the fallback
+    const post = views ? scale(RATES.xPost, views, mult) : followers ? scale(RATES.xPostByFollowers, followers, mult) : null;
+    if (post) {
+      sections.push({
+        name: 'X',
+        rates: [
+          ['Sponsored post', post],
+          ['3-post series', post.map((v) => v * 3 * BUNDLE_DISCOUNT)],
+        ],
+      });
+      bundleParts.push(post);
     }
   }
 

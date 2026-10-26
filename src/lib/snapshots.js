@@ -1,7 +1,9 @@
 // Daily stat snapshots, so Pro can show growth over time. One row per
 // creator, platform and day. YouTube's API rules don't allow keeping its
 // data for more than 30 days, so YouTube rows are deleted after 30 days;
-// Twitch and creator-entered TikTok numbers are kept.
+// Twitch and creator-entered numbers (TikTok, Instagram, Facebook, X) are kept.
+import { SOCIALS } from './socials.js';
+
 const YOUTUBE_KEEP_DAYS = 30;
 
 function today(now) {
@@ -17,9 +19,11 @@ export async function takeSnapshots(env, now = Date.now()) {
   const day = today(now);
   if (await alreadyDone(env, day)) return 0;
 
-  const [{ results: connections }, { results: tiktok }] = await Promise.all([
+  const entered = ['tiktok', ...SOCIALS.map((s) => s.key)];
+  const [{ results: connections }, { results: users }] = await Promise.all([
     env.DB.prepare('SELECT user_id, provider, stats FROM connections').all(),
-    env.DB.prepare('SELECT id, tiktok_followers, tiktok_avg_views FROM users WHERE tiktok_followers IS NOT NULL OR tiktok_avg_views IS NOT NULL').all(),
+    env.DB.prepare(`SELECT id, ${entered.map((p) => `${p}_followers, ${p}_avg_views`).join(', ')} FROM users
+      WHERE ${entered.map((p) => `${p}_followers IS NOT NULL OR ${p}_avg_views IS NOT NULL`).join(' OR ')}`).all(),
   ]);
 
   const rows = [];
@@ -30,7 +34,13 @@ export async function takeSnapshots(env, now = Date.now()) {
       rows.push([c.user_id, 'youtube', stats.subscribers ?? null, stats.avgViews ?? null]);
     }
   }
-  for (const u of tiktok) rows.push([u.id, 'tiktok', u.tiktok_followers, u.tiktok_avg_views]);
+  for (const u of users) {
+    for (const p of entered) {
+      const followers = u[`${p}_followers`];
+      const avgViews = u[`${p}_avg_views`];
+      if (followers != null || avgViews != null) rows.push([u.id, p, followers, avgViews]);
+    }
+  }
 
   const insert = `INSERT INTO stat_snapshots (user_id, day, platform, followers, avg_views) VALUES (?, ?, ?, ?, ?)
     ON CONFLICT (user_id, platform, day) DO UPDATE SET followers = excluded.followers, avg_views = excluded.avg_views`;
