@@ -56,7 +56,7 @@ function saveConnection(env, userId, provider, account, stats) {
 }
 
 // Per-creator tables, besides users, connections and sessions
-export const USER_DATA_TABLES = ['kit_views', 'kit_sources', 'kit_countries', 'link_events', 'tracked_links', 'kit_versions', 'stat_snapshots'];
+export const USER_DATA_TABLES = ['kit_views', 'kit_sources', 'kit_countries', 'link_events', 'tracked_links', 'kit_versions', 'stat_snapshots', 'deals'];
 
 // Profile fields copied from the merged-away profile when the kept one is empty
 const MERGE_FIELDS = [
@@ -101,6 +101,10 @@ async function mergeUsers(env, aId, bId, provider, account, stats) {
     statements.push(env.DB.prepare('UPDATE users SET plan = ?, plan_source = ?, plan_expires = ? WHERE id = ?')
       .bind(drop.plan, drop.plan_source, drop.plan_expires, keep.id));
   }
+  if (drop.gift_plan && PLAN_RANK[drop.gift_plan] > PLAN_RANK[keep.gift_plan || 'free']) {
+    statements.push(env.DB.prepare('UPDATE users SET gift_plan = ?, gift_expires = ? WHERE id = ?')
+      .bind(drop.gift_plan, drop.gift_expires, keep.id));
+  }
   // Keep a paying subscription and referral credit from either profile
   if (drop.stripe_subscription_id && !keep.stripe_subscription_id) {
     statements.push(env.DB.prepare(`UPDATE users SET stripe_customer_id = ?, stripe_subscription_id = ?, subscription_status = ?,
@@ -118,6 +122,10 @@ async function mergeUsers(env, aId, bId, provider, account, stats) {
   if (drop.founding && !keep.founding) {
     statements.push(env.DB.prepare('UPDATE users SET founding = 1 WHERE id = ?').bind(keep.id));
   }
+
+  // Deals are the creator's own records, so they move over. Their tracked
+  // links are deleted below, so deals stop pointing at them.
+  statements.push(env.DB.prepare('UPDATE deals SET user_id = ?, link_id = NULL WHERE user_id = ?').bind(keep.id, drop.id));
 
   // Analytics, links and versions on the merged-away profile go with it
   for (const table of USER_DATA_TABLES) {

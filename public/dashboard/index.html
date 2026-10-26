@@ -29,6 +29,7 @@
       <button type="button" role="tab" class="tab" id="tab-overview" aria-controls="panel-overview" aria-selected="true">Overview</button>
       <button type="button" role="tab" class="tab" id="tab-edit" aria-controls="profile" aria-selected="false">Edit kit</button>
       <button type="button" role="tab" class="tab" id="tab-versions" aria-controls="panel-versions" aria-selected="false">Kit versions</button>
+      <button type="button" role="tab" class="tab" id="tab-deals" aria-controls="panel-deals" aria-selected="false">Deals</button>
     </div>
 
     <!-- Overview -->
@@ -159,6 +160,78 @@
         <button type="button" class="button-danger" id="deleteAccount">Delete my account</button>
         <p class="small muted account-id">Account ID: <code id="accountId"></code></p>
       </section>
+    </div>
+
+    <!-- Deals (Pro) -->
+    <div id="panel-deals" role="tabpanel" aria-labelledby="tab-deals" class="tab-panel" hidden>
+      <section class="panel pro-panel" id="dealsPanel">
+        <div class="section-head">
+          <h2>Deals <span class="plan-pill">Pro</span></h2>
+          <button type="button" id="newDeal">Add a deal</button>
+        </div>
+        <p class="small muted">Every sponsorship from first pitch to payment, in one place. Only you can see this.</p>
+        <div id="dealsBody"></div>
+      </section>
+
+      <dialog class="deal-dialog" id="dealDialog" aria-labelledby="dealDialogTitle">
+        <form id="dealForm" novalidate>
+          <div class="section-head">
+            <h2 id="dealDialogTitle">Add a deal</h2>
+            <button type="button" class="button-link" id="closeDeal" aria-label="Close">Close</button>
+          </div>
+          <p class="alert alert-error" id="dealError" hidden></p>
+          <div class="field-row">
+            <label>Brand
+              <input type="text" name="brand" maxlength="80" required list="brandSuggestions" autocomplete="off" placeholder="e.g. Razer">
+            </label>
+            <label>Website
+              <input type="text" name="website" maxlength="200" placeholder="razer.com" inputmode="url">
+            </label>
+          </div>
+          <datalist id="brandSuggestions"></datalist>
+          <div class="field-row">
+            <label>Contact name
+              <input type="text" name="contactName" maxlength="80" placeholder="Who you're talking to">
+            </label>
+            <label>Contact email
+              <input type="email" name="contactEmail" maxlength="254">
+            </label>
+          </div>
+          <div class="field-row">
+            <label>Stage
+              <select name="stage"></select>
+            </label>
+            <label>Amount
+              <span class="amount-input">
+                <input type="number" name="amount" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 500">
+                <select name="currency" aria-label="Currency"></select>
+              </span>
+            </label>
+          </div>
+          <label>Deliverables
+            <textarea name="deliverables" maxlength="500" rows="2" placeholder="e.g. 1 YouTube integration (60–90s) + 2 Shorts"></textarea>
+          </label>
+          <div class="field-row">
+            <label>Content due
+              <input type="date" name="dueDate">
+            </label>
+            <label>Payment due
+              <input type="date" name="paymentDue">
+            </label>
+            <label data-paid-only>Paid on
+              <input type="date" name="paidOn">
+            </label>
+          </div>
+          <label>Notes
+            <textarea name="notes" maxlength="2000" rows="3" placeholder="Talking points, links, payment terms…"></textarea>
+          </label>
+          <p class="small muted" id="dealLinkNote" hidden></p>
+          <div class="save-bar deal-actions">
+            <button type="submit" id="saveDeal">Save deal</button>
+            <button type="button" class="button-link danger-link" id="deleteDeal" hidden>Delete deal</button>
+          </div>
+        </form>
+      </dialog>
     </div>
 
     <!-- Kit versions -->

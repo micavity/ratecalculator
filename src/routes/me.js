@@ -4,7 +4,7 @@ import { getConnections, getViewStats, profileFields } from '../lib/users.js';
 import { planInfo, planLimits } from '../lib/plans.js';
 import { getVersions, versionFields } from '../lib/versions.js';
 import { billingInfo } from '../lib/billing.js';
-import { stripeConfigured } from '../lib/stripe.js';
+import { stripeConfigured, proConfigured } from '../lib/stripe.js';
 import { twitchConfigured } from '../lib/twitch.js';
 import { youtubeConfigured } from '../lib/youtube.js';
 
@@ -19,7 +19,7 @@ export async function onRequestGet({ request, env }) {
     views: await getViewStats(env, user.id),
     plan: planInfo(user),
     limits: planLimits(user),
-    billing: billingInfo(user, stripeConfigured(env)),
+    billing: billingInfo(user, stripeConfigured(env), proConfigured(env)),
     referralDiscount: Boolean(user.referred_by && !user.first_paid_at),
     versions: (await getVersions(env, user.id)).map(versionFields),
     available: { twitch: twitchConfigured(env), youtube: youtubeConfigured(env) },

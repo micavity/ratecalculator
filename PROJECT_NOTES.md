@@ -32,7 +32,7 @@ Free media kits and sponsorship rate estimates for creators. Built for gaming cr
 |---|---|---|
 | Free | $0 | Live |
 | Essential | $4.99/month or $49.99/year | Live |
-| Pro | $9.99/month | Planned, shown as "Coming soon" on `/pricing/` |
+| Pro | $9.99/month or $99.99/year | Built (deal tracker). Shown as "Coming soon" until its Stripe prices are added |
 | Ultra | $19.99/month | Planned; the only plan with AI features |
 
 - Essential is priced low on purpose ("mess the game up"): an impulse price that undercuts other creator tools and gets people paying. Prices are easier to raise later than to win people back.
@@ -78,8 +78,11 @@ Free media kits and sponsorship rate estimates for creators. Built for gaming cr
 - `robots.txt` and `sitemap.xml`
 - Daily stat snapshots (saved by the cron job, `src/lib/snapshots.js`), the start of Pro's growth charts. YouTube rows are deleted after 30 days (YouTube's rules); Twitch and TikTok rows are kept. Long-term YouTube history would need the YouTube Analytics API.
 - "Complete your kit" checklist at the top of the dashboard Overview (hideable, disappears when done)
+- **Pro plan setup:** Pro checkout, "Switch to Pro" for Essential subscribers (charges the difference now, same renewal date), gifts remembered so they come back when a paid plan ends, Pro card on `/pricing/` that switches on by itself once Pro's prices are set
+- **Deal tracker (Pro):** Deals tab with stages (Pitched → Negotiating → Agreed → Delivered → Paid, or Lost), amounts in 15 currencies, deliverables, content and payment due dates with overdue alerts, totals (earned this month, owed, pipeline), brand autofill from earlier deals and the kit's brand list, brand logos, and "Start a deal" from tracked links (deals show when the brand opens the kit). Deals are kept, hidden, if Pro lapses, and move over when profiles merge.
 
 ### Waiting on / to do outside the code
+- [ ] **Selling Pro** (when it has 2–3 features): in Stripe, add a Pro product with $9.99/month and $99.99/year prices, send Claude the two price IDs, and add Pro to the Customer Portal's plan switching. Until then, gift Pro to friends from `/admin`.
 - [ ] **Google verification** of the `youtube.readonly` scope (submitted). Until approved, YouTube sign-in shows "Google hasn't verified this app" and is capped at 100 users. **Don't launch widely until this is approved.**
 - [ ] **UK broadband filters** block the new domain for some people (a UK friend couldn't open `creatorgg.com` but could open the workers.dev address). Submit `creatorgg.com` for categorization at Cisco Talos, Fortinet and Palo Alto Networks, and report it to Sky, BT, Virgin Media and TalkTalk. Usually clears up as the domain ages.
 - [ ] Turn on **Always Use HTTPS** (Cloudflare → creatorgg.com → SSL/TLS → Edge Certificates).
@@ -94,7 +97,7 @@ Free media kits and sponsorship rate estimates for creators. Built for gaming cr
 
 1. **Before the public launch:** example kits from friends; maybe email alerts ("Razer opened your kit", welcome email; needs an email-sending service); daily stat snapshots (done).
 2. **TikTok verified stats** (TikTok Login Kit; needs TikTok app approval, so start early). Then maybe Instagram (Meta API, needs approval) and Kick.
-3. **Pro ($9.99):** deal tracker, invoices, brand proposals with an Accept button, growth charts, sponsor leads (from creators' brand lists plus a curated list), pitch templates.
+3. **Pro ($9.99):** ~~deal tracker~~ (done), invoices, brand proposals with an Accept button, growth charts, sponsor leads (from creators' brand lists plus a curated list), pitch templates.
 4. **Ultra ($19.99):** AI pitch writer, AI bio and kit copy, automatic sponsor detection.
 5. **Brand side (the bigger money later):** add a "list me in the brand directory" opt-in early, then brand search ($49–299/mo) and campaigns (indie game devs first; fee per campaign or a cut of deals).
 6. **Affiliate extras:** per-creator commission rates for ambassadors, custom codes.

@@ -10,11 +10,14 @@ directory = "./public"
 binding = "ASSETS"
 not_found_handling = "404-page"
 
-# Stripe prices for Essential (not secret). The secret key and webhook
+# Stripe prices (not secret). The secret key and webhook
 # signing secret are set in the Cloudflare dashboard.
 [vars]
 STRIPE_PRICE_MONTHLY = "price_1UUskPLelV3WIKMlwTXcetQ5"
 STRIPE_PRICE_YEARLY = "price_1UUskPLelV3WIKMlMR8INnqV"
+# Pro prices. Pro shows as "Coming soon" until both are filled in.
+# STRIPE_PRICE_PRO_MONTHLY = ""
+# STRIPE_PRICE_PRO_YEARLY = ""
 
 # Refresh stale creator stats every 6 hours
 [triggers]

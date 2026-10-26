@@ -84,6 +84,7 @@ const TABS = {
   overview: document.getElementById('panel-overview'),
   edit: form,
   versions: document.getElementById('panel-versions'),
+  deals: document.getElementById('panel-deals'),
 };
 
 function showTab(name) {
@@ -397,6 +398,10 @@ const SPECIAL_FIELDS = new Set(['featured', 'theme', 'rateMode', 'useAccent', 'a
 // Plan bar and Essential locks
 
 const PLAN_PRICES = 'Essential is $4.99/month or $49.99/year';
+const PRICES = {
+  essential: { name: 'Essential', month: '$4.99', year: '$49.99' },
+  pro: { name: 'Pro', month: '$9.99', year: '$99.99' },
+};
 const GRACE_MS = 3 * 86400000;
 
 function renderPlan() {
@@ -409,7 +414,7 @@ function renderPlan() {
     if (plan.source === 'gift') {
       detail = plan.expires ? `Gifted · until ${new Date(plan.expires).toLocaleDateString()}` : 'Gifted · never expires';
     } else if (billing.status === 'past_due') {
-      detail = 'Payment failed · update your card to keep Essential';
+      detail = `Payment failed · update your card to keep ${plan.name}`;
     } else if (plan.expires) {
       // plan.expires includes a few days' grace after the paid period
       const periodEnd = new Date(plan.expires - GRACE_MS).toLocaleDateString();
@@ -432,11 +437,7 @@ function renderPlan() {
       document.createTextNode('Essential adds your own rates and packages, detailed analytics, brand tracking links, kit versions and more.'),
     ]));
     if (billing.configured) {
-      const monthly = el('button', { type: 'button', class: 'plan-button', text: 'Upgrade · $4.99/month' });
-      const yearly = el('button', { type: 'button', class: 'button-secondary plan-button', text: '$49.99/year · 2 months free' });
-      monthly.addEventListener('click', () => goToStripe('/api/billing/checkout', { interval: 'month' }, monthly));
-      yearly.addEventListener('click', () => goToStripe('/api/billing/checkout', { interval: 'year' }, yearly));
-      bar.append(el('span', { class: 'plan-actions' }, [monthly, yearly]));
+      bar.append(el('span', { class: 'plan-actions' }, upgradeButtons('essential')));
       if (state.referralDiscount) {
         bar.append(el('span', { class: 'plan-note', text: "You were referred by a creator, so you'll get 20% off your first 3 months." }));
       }
@@ -451,6 +452,51 @@ function renderPlan() {
     group.classList.toggle('locked', !limits.essential);
     if (!limits.essential) group.querySelectorAll('input, select, textarea, button').forEach((control) => { control.disabled = true; });
   });
+}
+
+// Monthly and yearly checkout buttons for a plan, or a single "Switch"
+// button for creators who already pay for another plan
+function upgradeButtons(plan) {
+  const price = PRICES[plan];
+  if (state.billing.subscribed) {
+    const change = el('button', { type: 'button', class: 'plan-button', text: `Switch to ${price.name}` });
+    change.addEventListener('click', () => switchPlan(plan, change));
+    return [change];
+  }
+  const monthly = el('button', { type: 'button', class: 'plan-button', text: `Upgrade · ${price.month}/month` });
+  const yearly = el('button', { type: 'button', class: 'button-secondary plan-button', text: `${price.year}/year · 2 months free` });
+  monthly.addEventListener('click', () => goToStripe('/api/billing/checkout', { plan, interval: 'month' }, monthly));
+  yearly.addEventListener('click', () => goToStripe('/api/billing/checkout', { plan, interval: 'year' }, yearly));
+  return [monthly, yearly];
+}
+
+// Moves an existing subscription to another plan, keeping its billing period
+async function switchPlan(plan, button) {
+  const price = PRICES[plan];
+  const cost = state.billing.interval === 'year' ? `${price.year}/year` : `${price.month}/month`;
+  if (!confirm(`Switch to ${price.name} for ${cost}? Today you'll be charged the difference for the rest of your current billing period.`)) return;
+  const label = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Switching…';
+  try {
+    await api('/api/billing/change', { method: 'POST', body: JSON.stringify({ plan }) });
+    await reloadEverything();
+    showBanner(`Welcome to ${price.name}! Everything is unlocked.`, 'success');
+  } catch (err) {
+    showBanner(err.message);
+    button.disabled = false;
+    button.textContent = label;
+  }
+}
+
+async function reloadEverything() {
+  state = { ...state, ...(await api('/api/me')) };
+  fillForm();
+  renderPlan();
+  renderOverview();
+  renderVersions();
+  loadAnalytics();
+  loadDeals();
 }
 
 // Sends the creator to Stripe Checkout or the Customer Portal
@@ -469,21 +515,18 @@ async function goToStripe(path, body, button) {
 }
 
 // After paying, Stripe's confirmation can take a few seconds to reach us
-async function waitForUpgrade() {
-  showBanner('Payment received! Unlocking Essential…', 'info');
-  for (let i = 0; i < 15 && !state.limits.essential; i++) {
+async function waitForUpgrade(plan) {
+  const name = PRICES[plan].name;
+  showBanner(`Payment received! Unlocking ${name}…`, 'info');
+  for (let i = 0; i < 15 && !state.limits[plan]; i++) {
     await new Promise((resolve) => setTimeout(resolve, 2000));
     state = { ...state, ...(await api('/api/me')) };
   }
-  if (state.limits.essential) {
-    showBanner('Welcome to Essential! Everything is unlocked.', 'success');
-    fillForm();
-    renderPlan();
-    renderOverview();
-    renderVersions();
-    loadAnalytics();
+  if (state.limits[plan]) {
+    await reloadEverything();
+    showBanner(`Welcome to ${name}! Everything is unlocked.`, 'success');
   } else {
-    showBanner("Your payment went through, but Essential isn't showing yet. Refresh in a minute, or contact support@creatorgg.com.", 'info');
+    showBanner(`Your payment went through, but ${name} isn't showing yet. Refresh in a minute, or contact support@creatorgg.com.`, 'info');
   }
 }
 
@@ -818,7 +861,10 @@ function renderVersionSelect() {
     ...state.versions.map((v) => el('option', { value: v.id, text: `Version: ${v.name}` })));
 }
 
+let trackedLinks = [];
+
 function renderLinks(links, recent) {
+  trackedLinks = links;
   const recentEl = document.getElementById('recentOpens');
   recentEl.replaceChildren();
   if (recent.length) {
@@ -853,6 +899,11 @@ function renderLinks(links, recent) {
     const opened = link.opens
       ? `Opened ${link.opens} time${link.opens === 1 ? '' : 's'} · last ${relativeTime(link.lastOpenedAt)}`
       : 'Not opened yet';
+    const startDeal = el('button', { type: 'button', class: 'button-secondary', text: 'Start a deal' });
+    startDeal.addEventListener('click', () => {
+      showTab('deals');
+      if (state.limits.pro) openDeal(null, { brand: link.label, linkId: link.id });
+    });
     list.append(el('div', { class: 'connection link-row' }, [
       el('div', {}, [
         el('strong', { text: link.label }),
@@ -860,7 +911,7 @@ function renderLinks(links, recent) {
         el('p', { class: `small ${link.opens ? 'opened' : 'muted'}`, text: opened }),
         el('p', { class: 'small muted link-url', text: url.replace(/^https?:\/\//, '') }),
       ]),
-      el('div', { class: 'kit-link-actions' }, [copy, remove]),
+      el('div', { class: 'kit-link-actions' }, [copy, startDeal, remove]),
     ]));
   }
 }
@@ -1087,6 +1138,355 @@ newVersionForm.addEventListener('submit', async (event) => {
   }
 });
 
+// Deal tracker (Pro)
+
+const STAGE_NAMES = { pitched: 'Pitched', negotiating: 'Negotiating', agreed: 'Agreed', delivered: 'Delivered', paid: 'Paid', lost: 'Lost' };
+const OPEN_STAGES = ['pitched', 'negotiating', 'agreed', 'delivered'];
+const dealsPanel = document.getElementById('dealsPanel');
+const dealsBody = document.getElementById('dealsBody');
+const dealDialog = document.getElementById('dealDialog');
+const dealForm = document.getElementById('dealForm');
+const dealError = document.getElementById('dealError');
+let deals = [];
+let dealCurrencies = ['USD'];
+let dealFilter = 'active';
+let editingDeal = null;
+let dealLinkId = '';
+
+function isoDay(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function daysUntil(day) {
+  const [y, m, d] = day.split('-').map(Number);
+  const now = new Date();
+  return Math.round((new Date(y, m - 1, d) - new Date(now.getFullYear(), now.getMonth(), now.getDate())) / 86400000);
+}
+
+function shortDate(day) {
+  const [y, m, d] = day.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: y === new Date().getFullYear() ? undefined : 'numeric' });
+}
+
+function formatMoney(amount, currency) {
+  try {
+    return new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: amount % 1 ? 2 : 0 }).format(amount);
+  } catch {
+    return `${amount} ${currency}`;
+  }
+}
+
+// Totals in each currency used, e.g. "$1,200 + €300"
+function moneyTotal(list) {
+  const totals = new Map();
+  for (const d of list) {
+    if (d.amount === null) continue;
+    totals.set(d.currency, (totals.get(d.currency) || 0) + d.amount);
+  }
+  if (!totals.size) return '–';
+  return [...totals].sort((a, b) => b[1] - a[1]).map(([currency, amount]) => formatMoney(amount, currency)).join(' + ');
+}
+
+function domainOf(website) {
+  try {
+    return new URL(website).hostname.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+}
+
+function brandLogo(deal) {
+  const box = el('span', { class: 'brand-logo', 'aria-hidden': 'true', text: deal.brand.charAt(0).toUpperCase() });
+  const domain = domainOf(deal.website);
+  if (domain) {
+    const img = el('img', { src: `https://icons.duckduckgo.com/ip3/${encodeURIComponent(domain)}.ico`, alt: '', loading: 'lazy' });
+    img.addEventListener('load', () => {
+      if (img.naturalWidth > 1) box.replaceChildren(img);
+    });
+  }
+  return box;
+}
+
+function contentOverdue(d) {
+  return ['negotiating', 'agreed'].includes(d.stage) && d.dueDate && daysUntil(d.dueDate) < 0;
+}
+
+function paymentOverdue(d) {
+  return ['agreed', 'delivered'].includes(d.stage) && d.paymentDue && daysUntil(d.paymentDue) < 0;
+}
+
+function dueText(label, day) {
+  const days = daysUntil(day);
+  if (days < 0) return `${label} overdue by ${-days} day${days === -1 ? '' : 's'}`;
+  if (days === 0) return `${label} due today`;
+  if (days === 1) return `${label} due tomorrow`;
+  if (days <= 7) return `${label} due in ${days} days`;
+  return `${label} due ${shortDate(day)}`;
+}
+
+function dealBadges(d) {
+  const badges = [];
+  if (['pitched', 'negotiating', 'agreed'].includes(d.stage) && d.dueDate) {
+    badges.push([dueText('Content', d.dueDate), daysUntil(d.dueDate) <= 2 ? 'badge-warning' : '']);
+  }
+  if (['agreed', 'delivered'].includes(d.stage) && d.paymentDue) {
+    badges.push([dueText('Payment', d.paymentDue), daysUntil(d.paymentDue) < 0 ? 'badge-warning' : '']);
+  }
+  if (d.stage === 'paid' && d.paidOn) badges.push([`Paid ${shortDate(d.paidOn)}`, 'badge-good']);
+  if (d.lastOpenedAt && !['paid', 'lost'].includes(d.stage)) {
+    badges.push([`Opened your kit ${relativeTime(d.lastOpenedAt)}`, 'badge-good']);
+  } else if (d.linkLabel && !['paid', 'lost'].includes(d.stage)) {
+    badges.push(['Kit link not opened yet', '']);
+  }
+  return badges.map(([text, kind]) => el('span', { class: `badge ${kind}`, text }));
+}
+
+function dealSummary() {
+  const month = isoDay().slice(0, 7);
+  const attention = deals.filter((d) => contentOverdue(d) || paymentOverdue(d)).length;
+  const card = (value, label, warn) => el('div', { class: `stat${warn ? ' stat-warning' : ''}` }, [
+    el('span', { class: 'stat-value', text: value }),
+    el('span', { class: 'stat-label', text: label }),
+  ]);
+  return el('div', { class: 'view-stats deal-stats' }, [
+    card(moneyTotal(deals.filter((d) => d.stage === 'paid' && d.paidOn.startsWith(month))), 'Earned this month'),
+    card(moneyTotal(deals.filter((d) => ['agreed', 'delivered'].includes(d.stage))), 'Owed to you'),
+    card(moneyTotal(deals.filter((d) => ['pitched', 'negotiating'].includes(d.stage))), 'In the pipeline'),
+    card(String(attention), attention === 1 ? 'Deal overdue' : 'Deals overdue', attention > 0),
+  ]);
+}
+
+function dealFilters() {
+  const count = (stage) => deals.filter((d) => d.stage === stage).length;
+  const options = [
+    ['active', 'Active', deals.filter((d) => OPEN_STAGES.includes(d.stage)).length],
+    ...Object.entries(STAGE_NAMES).map(([key, name]) => [key, name, count(key)]),
+    ['all', 'All', deals.length],
+  ];
+  return el('div', { class: 'deal-filters', role: 'group', 'aria-label': 'Show deals' }, options
+    .filter(([key, , n]) => n > 0 || key === 'active' || key === 'all')
+    .map(([key, name, n]) => {
+      const button = el('button', { type: 'button', class: 'deal-filter', 'aria-pressed': String(dealFilter === key), text: `${name} ${n}` });
+      button.addEventListener('click', () => {
+        dealFilter = key;
+        renderDeals();
+      });
+      return button;
+    }));
+}
+
+const STAGE_ORDER = Object.keys(STAGE_NAMES);
+
+function sortDeals(list) {
+  const nextDate = (d) => (d.stage === 'delivered' ? d.paymentDue : d.dueDate) || '9999';
+  return [...list].sort((a, b) => STAGE_ORDER.indexOf(a.stage) - STAGE_ORDER.indexOf(b.stage)
+    || nextDate(a).localeCompare(nextDate(b))
+    || b.updatedAt - a.updatedAt);
+}
+
+function dealRow(d) {
+  const stage = el('select', { 'aria-label': `Stage for ${d.brand}` },
+    Object.entries(STAGE_NAMES).map(([key, name]) => el('option', { value: key, text: name })));
+  stage.value = d.stage;
+  stage.addEventListener('change', async () => {
+    const update = { ...d, stage: stage.value };
+    if (stage.value === 'paid' && !update.paidOn) update.paidOn = isoDay();
+    try {
+      await api(`/api/deals/${d.id}`, { method: 'PUT', body: JSON.stringify(update) });
+      loadDeals();
+    } catch (err) {
+      showBanner(err.message);
+      stage.value = d.stage;
+    }
+  });
+
+  const edit = el('button', { type: 'button', class: 'button-link', text: 'Edit' });
+  edit.addEventListener('click', () => openDeal(d));
+  const main = el('div', { class: 'deal-main' }, [
+    el('div', { class: 'deal-title' }, [
+      el('strong', { text: d.brand }),
+      d.amount !== null ? el('span', { class: 'deal-amount', text: formatMoney(d.amount, d.currency) }) : '',
+    ]),
+    d.deliverables ? el('p', { class: 'small', text: d.deliverables }) : '',
+    d.contactName || d.contactEmail ? el('p', { class: 'small muted', text: [d.contactName, d.contactEmail].filter(Boolean).join(' · ') }) : '',
+    el('div', { class: 'deal-badges' }, dealBadges(d)),
+  ]);
+  main.addEventListener('click', () => openDeal(d));
+  return el('div', { class: `deal stage-${d.stage}${d.stage === 'lost' ? ' deal-lost' : ''}` }, [
+    brandLogo(d),
+    main,
+    el('div', { class: 'deal-side' }, [stage, edit]),
+  ]);
+}
+
+function renderDeals() {
+  if (!deals.length) {
+    dealsBody.replaceChildren(el('div', { class: 'teaser' }, [
+      el('p', { text: 'No deals yet. Add the brands you\'ve pitched or are talking to, and track each one through to payment.' }),
+      el('p', { class: 'small', text: 'Tip: on the Overview tab, tracked brand links have a "Start a deal" button, and your deal shows when the brand opens your kit.' }),
+    ]));
+    return;
+  }
+  const shown = sortDeals(deals.filter((d) => dealFilter === 'all'
+    || (dealFilter === 'active' ? OPEN_STAGES.includes(d.stage) : d.stage === dealFilter)));
+  dealsBody.replaceChildren(
+    dealSummary(),
+    dealFilters(),
+    shown.length
+      ? el('div', { class: 'deal-list' }, shown.map(dealRow))
+      : el('p', { class: 'small muted', text: 'No deals here.' }),
+  );
+}
+
+function renderDealsLocked(saved) {
+  const parts = [
+    el('p', { text: 'Pro adds a deal tracker: every sponsorship from first pitch to payment, with deadlines, payment due dates, totals of what you\'ve earned and what you\'re owed, and alerts when a brand opens your kit.' }),
+  ];
+  if (saved) parts.push(el('p', { class: 'small', text: `You have ${saved} saved deal${saved === 1 ? '' : 's'}. ${saved === 1 ? 'It\'s' : 'They\'re'} kept safe and will be back when you upgrade.` }));
+  if (state.billing.proAvailable) {
+    parts.push(el('span', { class: 'plan-actions' }, upgradeButtons('pro')));
+    if (state.referralDiscount && !state.billing.subscribed) {
+      parts.push(el('p', { class: 'plan-note', text: "You were referred by a creator, so you'll get 20% off your first 3 months." }));
+    }
+  } else {
+    parts.push(el('p', { class: 'plan-cta', text: 'Pro is $9.99/month · Coming soon' }));
+  }
+  dealsBody.replaceChildren(el('div', { class: 'teaser' }, parts));
+}
+
+async function loadDeals() {
+  dealsPanel.classList.toggle('locked', !state.limits.pro);
+  let data;
+  try {
+    data = await api('/api/deals');
+  } catch (err) {
+    dealsBody.replaceChildren(el('p', { class: 'small muted', text: err.message }));
+    return;
+  }
+  if (data.locked) {
+    renderDealsLocked(data.saved);
+    return;
+  }
+  deals = data.deals;
+  dealCurrencies = data.currencies;
+  renderDeals();
+}
+
+// Kit brands are saved as "Name, https://link" lines
+function kitBrands() {
+  return String(state.profile.brands || '').split('\n').map((line) => {
+    const comma = line.lastIndexOf(',');
+    const url = comma > 0 ? line.slice(comma + 1).trim() : '';
+    return /^https?:\/\//i.test(url) ? { name: line.slice(0, comma).trim(), url } : { name: line.trim(), url: '' };
+  }).filter((b) => b.name);
+}
+
+function renderBrandSuggestions() {
+  const names = new Map();
+  for (const name of [...deals.map((d) => d.brand), ...kitBrands().map((b) => b.name), ...trackedLinks.map((l) => l.label)]) {
+    if (!names.has(name.toLowerCase())) names.set(name.toLowerCase(), name);
+  }
+  document.getElementById('brandSuggestions').replaceChildren(...[...names.values()].sort().map((name) => el('option', { value: name })));
+}
+
+// Fills in details from an earlier deal with the same brand, or from the kit's brand list
+function autofillBrand() {
+  const f = dealForm.elements;
+  const name = f.brand.value.trim().toLowerCase();
+  if (!name) return;
+  const earlier = deals.find((d) => d.brand.toLowerCase() === name && d !== editingDeal);
+  const kitBrand = kitBrands().find((b) => b.name.toLowerCase() === name);
+  const fill = (field, value) => {
+    if (value && !f[field].value) f[field].value = value;
+  };
+  fill('website', (earlier?.website || kitBrand?.url || '').replace(/^https?:\/\//, '').replace(/\/$/, ''));
+  fill('contactName', earlier?.contactName);
+  fill('contactEmail', earlier?.contactEmail);
+}
+
+function togglePaidOn() {
+  const paid = dealForm.elements.stage.value === 'paid';
+  dealForm.querySelector('[data-paid-only]').hidden = !paid;
+  if (paid && !dealForm.elements.paidOn.value) dealForm.elements.paidOn.value = isoDay();
+}
+
+function openDeal(deal, prefill = {}) {
+  editingDeal = deal;
+  const values = deal || { stage: 'pitched', currency: dealCurrencies.includes('USD') ? 'USD' : dealCurrencies[0], ...prefill };
+  const f = dealForm.elements;
+  dealForm.reset();
+  dealForm.querySelectorAll('.invalid').forEach((input) => input.classList.remove('invalid'));
+  dealError.hidden = true;
+  f.stage.replaceChildren(...Object.entries(STAGE_NAMES).map(([key, name]) => el('option', { value: key, text: name })));
+  f.currency.replaceChildren(...dealCurrencies.map((c) => el('option', { value: c, text: c })));
+  for (const key of ['brand', 'website', 'contactName', 'contactEmail', 'stage', 'currency', 'deliverables', 'dueDate', 'paymentDue', 'paidOn', 'notes']) {
+    f[key].value = values[key] || '';
+  }
+  f.website.value = f.website.value.replace(/^https?:\/\//, '');
+  f.amount.value = values.amount ?? '';
+  dealLinkId = values.linkId || '';
+  const link = trackedLinks.find((l) => l.id === dealLinkId);
+  const linkName = values.linkLabel || link?.label;
+  const note = document.getElementById('dealLinkNote');
+  note.hidden = !linkName;
+  note.textContent = linkName ? `Connected to your tracked link "${linkName}", so you'll see here when they open your kit.` : '';
+  document.getElementById('dealDialogTitle').textContent = deal ? `Edit deal: ${deal.brand}` : 'Add a deal';
+  document.getElementById('deleteDeal').hidden = !deal;
+  renderBrandSuggestions();
+  if (!deal) autofillBrand();
+  togglePaidOn();
+  dealDialog.showModal();
+  if (!deal) f.brand.focus();
+}
+
+dealForm.elements.brand.addEventListener('change', autofillBrand);
+dealForm.elements.stage.addEventListener('change', togglePaidOn);
+document.getElementById('newDeal').addEventListener('click', () => openDeal(null));
+document.getElementById('closeDeal').addEventListener('click', () => dealDialog.close());
+
+dealForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const f = dealForm.elements;
+  const body = Object.fromEntries(['brand', 'website', 'contactName', 'contactEmail', 'stage', 'amount', 'currency', 'deliverables', 'dueDate', 'paymentDue', 'paidOn', 'notes']
+    .map((key) => [key, f[key].value.trim()]));
+  body.linkId = dealLinkId;
+  const button = document.getElementById('saveDeal');
+  button.disabled = true;
+  dealForm.querySelectorAll('.invalid').forEach((input) => input.classList.remove('invalid'));
+  try {
+    await api(editingDeal ? `/api/deals/${editingDeal.id}` : '/api/deals', {
+      method: editingDeal ? 'PUT' : 'POST',
+      body: JSON.stringify(body),
+    });
+    dealDialog.close();
+    if (!editingDeal && dealFilter !== 'all' && !(dealFilter === 'active' ? OPEN_STAGES.includes(body.stage) : dealFilter === body.stage)) {
+      dealFilter = 'all';
+    }
+    await loadDeals();
+  } catch (err) {
+    dealError.textContent = err.message;
+    dealError.hidden = false;
+    if (err.field && f[err.field]) {
+      f[err.field].classList.add('invalid');
+      f[err.field].focus();
+    }
+  } finally {
+    button.disabled = false;
+  }
+});
+
+document.getElementById('deleteDeal').addEventListener('click', async () => {
+  if (!editingDeal || !confirm(`Delete the deal with ${editingDeal.brand}? This can't be undone.`)) return;
+  try {
+    await api(`/api/deals/${editingDeal.id}`, { method: 'DELETE' });
+    dealDialog.close();
+    loadDeals();
+  } catch (err) {
+    dealError.textContent = err.message;
+    dealError.hidden = false;
+  }
+});
+
 // Referral program
 
 const referralForm = document.getElementById('payoutForm');
@@ -1103,7 +1503,7 @@ async function loadReferrals() {
     return;
   }
   const p = data.program;
-  document.getElementById('referralPitch').textContent = `Share your link or code. Creators who sign up with it get ${p.discountPercent}% off their first ${p.discountMonths} months of Essential, and you earn ${Math.round(p.commissionRate * 100)}% of what they pay for ${p.commissionMonths} months.`;
+  document.getElementById('referralPitch').textContent = `Share your link or code. Creators who sign up with it get ${p.discountPercent}% off their first ${p.discountMonths} months of a paid plan, and you earn ${Math.round(p.commissionRate * 100)}% of what they pay for ${p.commissionMonths} months.`;
   document.getElementById('referralCode').textContent = data.code;
   document.getElementById('referralLink').textContent = data.link.replace(/^https?:\/\//, '');
   document.getElementById('copyReferralLink').onclick = (event) => copyText(data.link, event.target);
@@ -1153,6 +1553,7 @@ async function init() {
   renderOverview();
   renderVersions();
   loadAnalytics();
+  loadDeals();
   showTab(location.hash.slice(1));
   app.hidden = false;
   loadReferrals();
@@ -1162,14 +1563,28 @@ async function init() {
     pendingUpgrade = sessionStorage.getItem('cgg_upgrade');
     sessionStorage.removeItem('cgg_upgrade');
   } catch {}
-  if (pendingUpgrade && !state.limits.essential && state.billing.configured) {
-    const button = document.querySelector('.plan-actions button') || el('button');
-    goToStripe('/api/billing/checkout', { interval: pendingUpgrade === 'year' ? 'year' : 'month' }, button);
-  } else if (pendingUpgrade && state.limits.essential) {
-    showBanner("You're already on Essential.", 'info');
+  if (pendingUpgrade) continueUpgrade(pendingUpgrade);
+  const upgradedTo = justUpgraded === 'pro' ? 'pro' : 'essential';
+  if (justUpgraded && !state.limits[upgradedTo]) waitForUpgrade(upgradedTo);
+  else if (justUpgraded) showBanner(`Welcome to ${PRICES[upgradedTo].name}! Everything is unlocked.`, 'success');
+}
+
+// The pricing page saves "plan:interval" (older pages saved just the interval)
+function continueUpgrade(choice) {
+  const [first, second] = choice.split(':');
+  const plan = second ? (first === 'pro' ? 'pro' : 'essential') : 'essential';
+  const interval = (second || first) === 'year' ? 'year' : 'month';
+  const name = PRICES[plan].name;
+  if (state.limits[plan]) {
+    showBanner(`You're already on ${name}.`, 'info');
+  } else if (plan === 'pro' && !state.billing.proAvailable) {
+    showBanner("Pro isn't available yet.", 'info');
+  } else if (state.billing.subscribed) {
+    showTab(plan === 'pro' ? 'deals' : 'overview');
+    showBanner(`To move to ${name}, use the "Switch to ${name}" button below.`, 'info');
+  } else if (state.billing.configured) {
+    goToStripe('/api/billing/checkout', { plan, interval }, el('button'));
   }
-  if (justUpgraded && !state.limits.essential) waitForUpgrade();
-  else if (justUpgraded) showBanner('Welcome to Essential! Everything is unlocked.', 'success');
 }
 
 init().catch((err) => {

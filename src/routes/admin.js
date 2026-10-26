@@ -109,15 +109,19 @@ export async function setPlan({ request, env, params }) {
   if (!target) return json({ error: 'Creator not found' }, 404);
 
   if (body.plan === 'free') {
-    await env.DB.prepare("UPDATE users SET plan = 'free', plan_source = '', plan_expires = NULL WHERE id = ?").bind(target.id).run();
+    // Removes the gift; a paid plan the creator has keeps going
+    await env.DB.batch([
+      env.DB.prepare('UPDATE users SET gift_plan = NULL, gift_expires = NULL WHERE id = ?').bind(target.id),
+      env.DB.prepare("UPDATE users SET plan = 'free', plan_source = '', plan_expires = NULL WHERE id = ? AND plan_source != 'paid'").bind(target.id),
+    ]);
   } else {
     const months = body.months === null || body.months === undefined ? null : Number(body.months);
     if (months !== null && !(Number.isInteger(months) && months > 0 && months <= 120)) {
       return json({ error: 'Choose a length between 1 and 120 months, or lifetime.' }, 400);
     }
     const expires = months === null ? null : Date.now() + months * 30 * 86400000;
-    await env.DB.prepare("UPDATE users SET plan = ?, plan_source = 'gift', plan_expires = ? WHERE id = ?")
-      .bind(body.plan, expires, target.id).run();
+    await env.DB.prepare("UPDATE users SET plan = ?, plan_source = 'gift', plan_expires = ?, gift_plan = ?, gift_expires = ? WHERE id = ?")
+      .bind(body.plan, expires, body.plan, expires, target.id).run();
   }
   const updated = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(target.id).first();
   return json({ ok: true, plan: planInfo(updated) });

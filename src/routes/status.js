@@ -1,7 +1,7 @@
 import { json } from '../lib/http.js';
 import { twitchConfigured } from '../lib/twitch.js';
 import { youtubeConfigured } from '../lib/youtube.js';
-import { stripeConfigured } from '../lib/stripe.js';
+import { stripeConfigured, proConfigured } from '../lib/stripe.js';
 
 // Setup check: which features are configured. Never shows the values.
 export async function onRequestGet({ env }) {
@@ -14,6 +14,7 @@ export async function onRequestGet({ env }) {
     twitch: twitchConfigured(env),
     youtube: youtubeConfigured(env),
     payments: stripeConfigured(env) && Boolean(env.STRIPE_WEBHOOK_SECRET),
+    pro: proConfigured(env),
     found: {
       TWITCH_CLIENT_ID: Boolean(env.TWITCH_CLIENT_ID),
       TWITCH_CLIENT_SECRET: Boolean(env.TWITCH_CLIENT_SECRET),
@@ -24,6 +25,8 @@ export async function onRequestGet({ env }) {
       STRIPE_WEBHOOK_SECRET: Boolean(env.STRIPE_WEBHOOK_SECRET),
       STRIPE_PRICE_MONTHLY: Boolean(env.STRIPE_PRICE_MONTHLY),
       STRIPE_PRICE_YEARLY: Boolean(env.STRIPE_PRICE_YEARLY),
+      STRIPE_PRICE_PRO_MONTHLY: Boolean(env.STRIPE_PRICE_PRO_MONTHLY),
+      STRIPE_PRICE_PRO_YEARLY: Boolean(env.STRIPE_PRICE_PRO_YEARLY),
     },
   });
 }

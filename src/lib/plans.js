@@ -1,4 +1,4 @@
-// Subscription plans. A plan comes from PayPal ("paid") or from an admin
+// Subscription plans. A plan comes from Stripe ("paid") or from an admin
 // ("gift"). plan_expires is null for plans that never expire.
 export const PLAN_RANK = { free: 0, essential: 1, pro: 2, ultra: 3 };
 export const PLAN_NAMES = { free: 'Free', essential: 'Essential', pro: 'Pro', ultra: 'Ultra' };
@@ -18,8 +18,11 @@ export function hasPlan(user, needed) {
 // so nothing is lost if a creator's plan lapses and later comes back.
 export function planLimits(user) {
   const essential = hasPlan(user, 'essential');
+  const pro = hasPlan(user, 'pro');
   return {
     essential,
+    pro,
+    deals: pro ? 500 : 0,
     featured: essential ? 6 : 3,
     versions: essential ? 2 : 0,
     trackedLinks: essential ? 50 : 0,
@@ -35,4 +38,12 @@ export function planInfo(user) {
     expires: plan === 'free' ? null : user.plan_expires,
     founding: Boolean(user.founding),
   };
+}
+
+// A gift is remembered separately, so it comes back when a paid plan ends
+export function activeGift(user, now = Date.now()) {
+  const plan = user?.gift_plan;
+  if (!plan || !(plan in PLAN_RANK) || plan === 'free') return null;
+  if (user.gift_expires && user.gift_expires <= now) return null;
+  return { plan, expires: user.gift_expires ?? null };
 }

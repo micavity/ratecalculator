@@ -150,6 +150,33 @@ export const MIGRATIONS = [
       PRIMARY KEY (user_id, platform, day)
     )`,
   ],
+  // 6: Pro deal tracker, and gifts remembered separately from paid plans
+  // so a gift comes back when a paid subscription ends
+  [
+    `CREATE TABLE IF NOT EXISTS deals (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      brand TEXT NOT NULL,
+      website TEXT,
+      contact_name TEXT,
+      contact_email TEXT,
+      stage TEXT NOT NULL,
+      amount_cents INTEGER,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      deliverables TEXT,
+      due_date TEXT,
+      payment_due TEXT,
+      paid_on TEXT,
+      notes TEXT,
+      link_id TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS deals_user ON deals (user_id, updated_at)',
+    'ALTER TABLE users ADD COLUMN gift_plan TEXT',
+    'ALTER TABLE users ADD COLUMN gift_expires INTEGER',
+    "UPDATE users SET gift_plan = plan, gift_expires = plan_expires WHERE plan_source = 'gift'",
+  ],
 ];
 
 let ready = null;

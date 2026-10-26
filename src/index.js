@@ -17,6 +17,8 @@ import * as versions from './routes/versions.js';
 import * as admin from './routes/admin.js';
 import * as billing from './routes/billing.js';
 import * as referrals from './routes/referrals.js';
+import * as deals from './routes/deals.js';
+import * as plans from './routes/plans.js';
 import { ensureSchema } from './lib/migrate.js';
 import { refreshStaleUsers } from './lib/users.js';
 import { pruneOldEvents } from './lib/analytics.js';
@@ -37,6 +39,12 @@ const ROUTES = [
   ['DELETE', '/api/versions/:id', versions.onRequestDelete],
   ['POST', '/api/billing/checkout', billing.checkout],
   ['POST', '/api/billing/portal', billing.portal],
+  ['POST', '/api/billing/change', billing.changePlan],
+  ['GET', '/api/deals', deals.onRequestGet],
+  ['POST', '/api/deals', deals.onRequestPost],
+  ['PUT', '/api/deals/:id', deals.onRequestPut],
+  ['DELETE', '/api/deals/:id', deals.onRequestDelete],
+  ['GET', '/api/plans', plans.onRequestGet],
   ['POST', '/api/stripe/webhook', billing.webhook],
   ['GET', '/api/referrals', referrals.onRequestGet],
   ['PUT', '/api/referrals', referrals.onRequestPut],

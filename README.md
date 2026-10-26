@@ -17,6 +17,7 @@ See `PROJECT_NOTES.md` for decisions, status and the roadmap.
   - `kit.js`: public media kits at `/<name>`
   - `auth-start.js`, `auth-callback.js`: Twitch and YouTube sign-in
   - `admin.js`: admin page and API
+  - `deals.js`: Pro deal tracker API
   - the rest: dashboard API (profile, analytics, tracked links, kit versions)
 - `src/lib/`: shared backend code
 - `src/lib/migrate.js`: database tables. New migrations run automatically on the first request after a deploy.
@@ -56,10 +57,10 @@ Redeploy after adding them. Check `/api/status` to confirm the site can see them
 Add a secret `ADMIN_USER_IDS` with your CreatorGG account ID (shown at the bottom of the dashboard's Overview tab). Separate several IDs with commas. Admins can open `/admin` to search creators, gift plans and see site stats; everyone else gets a 404.
 
 ### 6. Payments (Stripe)
-1. Create a product with two recurring prices (monthly and yearly) and put their IDs in `wrangler.toml` under `[vars]`.
+1. Create an Essential product with two recurring prices (monthly and yearly) and put their IDs in `wrangler.toml` under `[vars]` as `STRIPE_PRICE_MONTHLY` and `STRIPE_PRICE_YEARLY`. For Pro, do the same with `STRIPE_PRICE_PRO_MONTHLY` and `STRIPE_PRICE_PRO_YEARLY`; Pro shows as "Coming soon" until both are set.
 2. Add the secret key as a secret named `STRIPE_SECRET_KEY`.
 3. Add a webhook endpoint at `https://<your-site>/api/stripe/webhook` for these events: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_failed`, `charge.refunded`. Add its signing secret as `STRIPE_WEBHOOK_SECRET`.
-4. Turn on the Customer Portal (Settings → Billing → Customer portal) with cancel, update payment method, invoice history and switching between the two prices.
+4. Turn on the Customer Portal (Settings → Billing → Customer portal) with cancel, update payment method, invoice history and switching between plans (add both products and all four prices).
 
 All Stripe requests use API version `2024-06-20`, and webhooks re-fetch objects from Stripe, so the account's default API version doesn't matter.
 
@@ -73,9 +74,10 @@ Every creator gets a referral code (from their kit link) and a link (`/?ref=CODE
 |---|---|---|
 | Free | $0 | Media kit, verified stats, estimated rates, 3 featured videos, sharing tools, view counts |
 | Essential | $4.99/mo or $49.99/yr | Own rates and packages, no CreatorGG branding, section layout, more colors and kit styles, 6 featured videos, detailed analytics, tracked brand links, 2 extra kit versions |
-| Pro / Ultra | later | |
+| Pro | $9.99/mo or $99.99/yr | Everything in Essential, plus the deal tracker (more Pro features planned) |
+| Ultra | later | |
 
-Plans live on the `users` table (`plan`, `plan_source` = `paid` or `gift`, `plan_expires`, null = never). Limits are in `src/lib/plans.js`. Features are checked on the server; when a plan lapses, Essential settings are kept but hidden. Paid plans come from Stripe; gifted plans are set from `/admin`. A gift that's at least as good as Essential and lasts at least as long takes priority over a payment.
+Plans live on the `users` table (`plan`, `plan_source` = `paid` or `gift`, `plan_expires`, null = never). Limits are in `src/lib/plans.js`. Features are checked on the server; when a plan lapses, Essential settings are kept but hidden. Paid plans come from Stripe; gifted plans are set from `/admin` and also remembered in `gift_plan` / `gift_expires`, so a gift comes back when a paid plan ends. A gift that's at least as good as the paid plan and lasts at least as long takes priority over a payment. Creators who already pay move from Essential to Pro with "Switch to Pro" (`/api/billing/change`), which charges the difference right away.
 
 ## Local development
 

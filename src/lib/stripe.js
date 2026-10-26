@@ -7,6 +7,21 @@ export function stripeConfigured(env) {
   return Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_PRICE_MONTHLY && env.STRIPE_PRICE_YEARLY);
 }
 
+// Pro goes on sale once its prices are added to wrangler.toml
+export function proConfigured(env) {
+  return stripeConfigured(env) && Boolean(env.STRIPE_PRICE_PRO_MONTHLY && env.STRIPE_PRICE_PRO_YEARLY);
+}
+
+export function priceFor(env, plan, interval) {
+  if (plan === 'pro') return interval === 'year' ? env.STRIPE_PRICE_PRO_YEARLY : env.STRIPE_PRICE_PRO_MONTHLY;
+  return interval === 'year' ? env.STRIPE_PRICE_YEARLY : env.STRIPE_PRICE_MONTHLY;
+}
+
+// Which plan a Stripe price belongs to. Anything unknown counts as Essential.
+export function planForPrice(env, priceId) {
+  return priceId && (priceId === env.STRIPE_PRICE_PRO_MONTHLY || priceId === env.STRIPE_PRICE_PRO_YEARLY) ? 'pro' : 'essential';
+}
+
 // Stripe takes form-encoded bodies with nested keys like line_items[0][price]
 function encode(params, prefix = '', out = new URLSearchParams()) {
   for (const [key, value] of Object.entries(params)) {

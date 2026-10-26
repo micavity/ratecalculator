@@ -74,19 +74,25 @@
         </ul>
       </div>
 
-      <div class="price-card price-card-soon">
-        <span class="popular soon">Coming soon</span>
+      <div class="price-card price-card-soon" id="proCard">
+        <span class="popular soon" id="proTag">Coming soon</span>
         <h2>Pro</h2>
-        <p class="price"><strong>$9.99</strong> /month</p>
+        <p class="price" data-price-month="$9.99" data-price-year="$99.99" data-per-month="/month" data-per-year="/year"><strong>$9.99</strong> <span>/month</span></p>
+        <p class="small muted yearly-note" hidden>That's about $8.33 a month, billed yearly.</p>
         <p class="muted">For creators managing several deals at once.</p>
-        <button type="button" class="button-secondary" disabled>Coming soon</button>
+        <button type="button" class="button-secondary" id="proButton" disabled>Coming soon</button>
         <ul class="checks">
           <li><strong>Everything in Essential, plus:</strong></li>
-          <li>Deal tracker with deadlines and payment reminders</li>
+          <li>Deal tracker: every sponsorship from pitch to payment</li>
+          <li>Content and payment due dates, with overdue alerts</li>
+          <li>See what you've earned this month and what you're owed</li>
+          <li>Deals show when the brand opens your kit</li>
+        </ul>
+        <p class="small muted soon-list-title">Coming to Pro:</p>
+        <ul class="checks checks-soon">
           <li>One-click invoices</li>
           <li>Brand proposals with an Accept button</li>
           <li>Growth charts on your kit</li>
-          <li>Sponsor leads for your niche</li>
           <li>Pitch templates with your stats filled in</li>
         </ul>
       </div>
@@ -98,7 +104,7 @@
       <h2 class="section-title">Pricing questions</h2>
       <details>
         <summary>Can I cancel any time?</summary>
-        <p>Yes. Cancel from "Manage subscription" on your dashboard. You keep Essential until the end of the period you've paid for, and you won't be charged again.</p>
+        <p>Yes. Cancel from "Manage subscription" on your dashboard. You keep your plan until the end of the period you've paid for, and you won't be charged again.</p>
       </details>
       <details>
         <summary>What happens to my settings if I go back to Free?</summary>
@@ -106,11 +112,15 @@
       </details>
       <details>
         <summary>A creator gave me their referral link. Do I get a discount?</summary>
-        <p>Yes. Sign up through a creator's link, or enter their code at checkout, and you get 20% off your first 3 months of Essential.</p>
+        <p>Yes. Sign up through a creator's link, or enter their code at checkout, and you get 20% off your first 3 months of Essential or Pro.</p>
       </details>
       <details>
         <summary>Can I switch between monthly and yearly?</summary>
         <p>Yes, any time from "Manage subscription" on your dashboard.</p>
+      </details>
+      <details>
+        <summary>Can I move from Essential to Pro?</summary>
+        <p>Yes. Use "Switch to Pro" on your dashboard's Deals tab. You only pay the difference for the rest of your current billing period, and your renewal date stays the same.</p>
       </details>
       <details>
         <summary>Do you offer refunds?</summary>
@@ -129,26 +139,39 @@
   <script>
     document.querySelectorAll('.year').forEach((el) => { el.textContent = new Date().getFullYear(); });
 
-    const price = document.querySelector('[data-price-month]');
-    const yearlyNote = document.querySelector('.yearly-note');
     let period = 'month';
     document.querySelectorAll('input[name="period"]').forEach((input) => {
       input.addEventListener('change', () => {
         period = input.value;
-        price.querySelector('strong').textContent = price.dataset[period === 'year' ? 'priceYear' : 'priceMonth'];
-        price.querySelector('span').textContent = price.dataset[period === 'year' ? 'perYear' : 'perMonth'];
-        yearlyNote.hidden = period !== 'year';
+        document.querySelectorAll('[data-price-month]').forEach((price) => {
+          price.querySelector('strong').textContent = price.dataset[period === 'year' ? 'priceYear' : 'priceMonth'];
+          price.querySelector('span').textContent = price.dataset[period === 'year' ? 'perYear' : 'perMonth'];
+        });
+        document.querySelectorAll('.yearly-note').forEach((note) => { note.hidden = period !== 'year'; });
       });
     });
 
     // Remember the choice so checkout starts once the creator is on their dashboard,
     // even if they have to sign in first
-    document.getElementById('upgradeButton').addEventListener('click', () => {
+    function upgrade(plan) {
       try {
-        sessionStorage.setItem('cgg_upgrade', period);
+        sessionStorage.setItem('cgg_upgrade', `${plan}:${period}`);
       } catch {}
       location.href = '/dashboard/';
-    });
+    }
+    document.getElementById('upgradeButton').addEventListener('click', () => upgrade('essential'));
+
+    // Pro switches on here once it's for sale
+    const proButton = document.getElementById('proButton');
+    proButton.addEventListener('click', () => upgrade('pro'));
+    fetch('/api/plans').then((res) => res.json()).then((plans) => {
+      if (!plans.pro) return;
+      document.getElementById('proCard').classList.remove('price-card-soon');
+      document.getElementById('proTag').remove();
+      proButton.disabled = false;
+      proButton.className = 'upgrade-button';
+      proButton.textContent = 'Upgrade to Pro';
+    }).catch(() => {});
   </script>
 </body>
 </html>

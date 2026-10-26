@@ -1,8 +1,8 @@
-// Stripe subscriptions for Essential. Stripe is the source of truth: every
+// Stripe subscriptions for Essential and Pro. Stripe is the source of truth: every
 // webhook re-fetches the object from Stripe (with our pinned API version)
 // before updating the creator's plan.
-import { stripe } from './stripe.js';
-import { PLAN_RANK, effectivePlan } from './plans.js';
+import { stripe, planForPrice } from './stripe.js';
+import { PLAN_RANK, activeGift } from './plans.js';
 import { recordCommission, adjustCommissionForRefund } from './referrals.js';
 
 // Access lasts a few days past the paid period, so a slightly late renewal
@@ -25,11 +25,18 @@ async function findUser(env, { subscriptionId, userId, customerId }) {
 }
 
 // A gift that's at least as good and lasts at least as long wins over a payment
-function giftOutranks(user, paidUntil) {
-  if (user.plan_source !== 'gift') return false;
-  const plan = effectivePlan(user);
-  if (PLAN_RANK[plan] < PLAN_RANK.essential) return false;
-  return !user.plan_expires || user.plan_expires >= paidUntil;
+function giftOutranks(user, paidPlan, paidUntil) {
+  const gift = activeGift(user);
+  if (!gift || PLAN_RANK[gift.plan] < PLAN_RANK[paidPlan]) return false;
+  return !gift.expires || gift.expires >= paidUntil;
+}
+
+// When a paid plan ends, a gift that's still running takes over again
+function planAfterPaidEnds(env, user) {
+  const gift = activeGift(user);
+  return gift
+    ? env.DB.prepare("UPDATE users SET plan = ?, plan_source = 'gift', plan_expires = ? WHERE id = ?").bind(gift.plan, gift.expires, user.id)
+    : env.DB.prepare("UPDATE users SET plan = 'free', plan_source = '', plan_expires = NULL WHERE id = ?").bind(user.id);
 }
 
 export async function syncSubscription(env, subscription) {
@@ -42,7 +49,9 @@ export async function syncSubscription(env, subscription) {
 
   const active = ACTIVE_STATUSES.has(subscription.status);
   const periodEnd = (subscription.current_period_end || 0) * 1000;
-  const interval = subscription.items?.data?.[0]?.price?.recurring?.interval || null;
+  const price = subscription.items?.data?.[0]?.price;
+  const interval = price?.recurring?.interval || null;
+  const paidPlan = planForPrice(env, price?.id);
   const statements = [
     env.DB.prepare(`UPDATE users SET stripe_subscription_id = ?, stripe_customer_id = ?, subscription_status = ?,
       subscription_interval = ?, cancel_at_period_end = ? WHERE id = ?`)
@@ -51,12 +60,14 @@ export async function syncSubscription(env, subscription) {
 
   if (active && periodEnd) {
     const paidUntil = periodEnd + GRACE_MS;
-    if (!giftOutranks(user, paidUntil)) {
-      statements.push(env.DB.prepare("UPDATE users SET plan = 'essential', plan_source = 'paid', plan_expires = ? WHERE id = ?")
-        .bind(paidUntil, user.id));
+    if (giftOutranks(user, paidPlan, paidUntil)) {
+      if (user.plan_source === 'paid') statements.push(planAfterPaidEnds(env, user));
+    } else {
+      statements.push(env.DB.prepare("UPDATE users SET plan = ?, plan_source = 'paid', plan_expires = ? WHERE id = ?")
+        .bind(paidPlan, paidUntil, user.id));
     }
   } else if (['canceled', 'unpaid', 'incomplete_expired'].includes(subscription.status) && user.plan_source === 'paid') {
-    statements.push(env.DB.prepare("UPDATE users SET plan = 'free', plan_source = '', plan_expires = NULL WHERE id = ?").bind(user.id));
+    statements.push(planAfterPaidEnds(env, user));
   }
   await env.DB.batch(statements);
   return user.id;
@@ -133,9 +144,11 @@ export async function handleStripeEvent(env, event) {
 }
 
 // What the dashboard shows about a creator's subscription
-export function billingInfo(user, configured) {
+export function billingInfo(user, configured, proAvailable) {
   return {
     configured,
+    proAvailable,
+    subscribed: Boolean(user.stripe_subscription_id && ACTIVE_STATUSES.has(user.subscription_status)),
     status: user.subscription_status || '',
     interval: user.subscription_interval,
     cancelAtPeriodEnd: Boolean(user.cancel_at_period_end),
