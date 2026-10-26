@@ -13,8 +13,6 @@ const SLUG_PATTERN = /^[a-z0-9_-]{3,30}$/;
 const STALE_MS = 24 * 3600 * 1000;
 const MANUAL_REFRESH_MS = 10 * 60 * 1000;
 
-export class LinkError extends Error {}
-
 export function isValidSlug(slug) {
   return SLUG_PATTERN.test(slug) && !RESERVED_SLUGS.has(slug);
 }
@@ -37,8 +35,8 @@ async function uniqueSlug(env, hint) {
   return `creator${crypto.randomUUID().slice(0, 8)}`;
 }
 
-async function saveConnection(env, userId, provider, account, stats) {
-  await env.DB.prepare(
+function saveConnection(env, userId, provider, account, stats) {
+  return env.DB.prepare(
     `INSERT INTO connections (provider, provider_id, user_id, username, url, avatar_url, stats, stats_updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT (provider, provider_id) DO UPDATE SET
@@ -47,13 +45,59 @@ async function saveConnection(env, userId, provider, account, stats) {
   ).bind(
     provider, account.providerId, userId, account.username, account.url,
     account.avatarUrl, JSON.stringify(stats), Date.now(),
-  ).run();
+  );
+}
+
+// Profile fields copied from the merged-away profile when the kept one is empty
+const MERGE_FIELDS = [
+  'avatar_url', 'bio', 'games', 'contact_email', 'twitch_avg_viewers',
+  'tiktok_handle', 'tiktok_followers', 'tiktok_avg_views', 'tiktok_engagement',
+];
+
+/**
+ * Combines two profiles when a creator links an account that already
+ * belongs to another profile. Signing in with that account proves they
+ * own the other profile too. The older profile is kept; the account being
+ * linked replaces any other account on the same platform, and for other
+ * platforms the kept profile's accounts win. Returns the kept user ID.
+ */
+async function mergeUsers(env, aId, bId, provider, account, stats) {
+  const [a, b] = await Promise.all([aId, bId].map((id) =>
+    env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(id).first()));
+  const [keep, drop] = a.created_at <= b.created_at ? [a, b] : [b, a];
+  const keepConnections = await getConnections(env, keep.id);
+  const dropConnections = await getConnections(env, drop.id);
+
+  const statements = [
+    env.DB.prepare('DELETE FROM connections WHERE user_id IN (?, ?) AND provider = ? AND provider_id != ?')
+      .bind(keep.id, drop.id, provider, account.providerId),
+  ];
+  for (const [p, conn] of Object.entries(dropConnections)) {
+    if (p === provider) continue;
+    statements.push(keepConnections[p]
+      ? env.DB.prepare('DELETE FROM connections WHERE provider = ? AND provider_id = ?').bind(p, conn.providerId)
+      : env.DB.prepare('UPDATE connections SET user_id = ? WHERE provider = ? AND provider_id = ?').bind(keep.id, p, conn.providerId));
+  }
+  statements.push(saveConnection(env, keep.id, provider, account, stats));
+
+  const fill = MERGE_FIELDS.filter((f) => (keep[f] === null || keep[f] === '') && drop[f] !== null && drop[f] !== '');
+  if (fill.length) {
+    statements.push(env.DB.prepare(`UPDATE users SET ${fill.map((f) => `${f} = ?`).join(', ')}, updated_at = ? WHERE id = ?`)
+      .bind(...fill.map((f) => drop[f]), Date.now(), keep.id));
+  }
+
+  // Keep the creator signed in, now on the kept profile
+  statements.push(env.DB.prepare('UPDATE sessions SET user_id = ? WHERE user_id = ?').bind(keep.id, drop.id));
+  statements.push(env.DB.prepare('DELETE FROM users WHERE id = ?').bind(drop.id));
+  await env.DB.batch(statements);
+  return keep.id;
 }
 
 /**
  * Signs in with a provider account, creating a user if needed.
- * If currentUser is set, links the account to that user instead.
- * Returns the user ID.
+ * If currentUser is set, links the account to that user instead, merging
+ * profiles if the account already belongs to another one.
+ * Returns { userId, merged }.
  */
 export async function signInWithAccount(env, provider, account, stats, currentUser) {
   const existing = await env.DB.prepare(
@@ -62,31 +106,36 @@ export async function signInWithAccount(env, provider, account, stats, currentUs
 
   if (currentUser) {
     if (existing && existing.user_id !== currentUser.id) {
-      throw new LinkError('This account is already linked to a different CreatorGG profile.');
+      const userId = await mergeUsers(env, currentUser.id, existing.user_id, provider, account, stats);
+      return { userId, merged: true };
     }
     // One account per platform: replace any other linked account
-    await env.DB.prepare('DELETE FROM connections WHERE user_id = ? AND provider = ? AND provider_id != ?')
-      .bind(currentUser.id, provider, account.providerId).run();
-    await saveConnection(env, currentUser.id, provider, account, stats);
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM connections WHERE user_id = ? AND provider = ? AND provider_id != ?')
+        .bind(currentUser.id, provider, account.providerId),
+      saveConnection(env, currentUser.id, provider, account, stats),
+    ]);
     if (!currentUser.avatar_url && account.avatarUrl) {
       await env.DB.prepare('UPDATE users SET avatar_url = ? WHERE id = ?').bind(account.avatarUrl, currentUser.id).run();
     }
-    return currentUser.id;
+    return { userId: currentUser.id, merged: false };
   }
 
   if (existing) {
-    await saveConnection(env, existing.user_id, provider, account, stats);
-    return existing.user_id;
+    await saveConnection(env, existing.user_id, provider, account, stats).run();
+    return { userId: existing.user_id, merged: false };
   }
 
   const id = crypto.randomUUID();
   const now = Date.now();
-  await env.DB.prepare(
-    `INSERT INTO users (id, slug, display_name, avatar_url, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
-  ).bind(id, await uniqueSlug(env, account.slugHint), account.username.slice(0, 60), account.avatarUrl, now, now).run();
-  await saveConnection(env, id, provider, account, stats);
-  return id;
+  await env.DB.batch([
+    env.DB.prepare(
+      `INSERT INTO users (id, slug, display_name, avatar_url, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).bind(id, await uniqueSlug(env, account.slugHint), account.username.slice(0, 60), account.avatarUrl, now, now),
+    saveConnection(env, id, provider, account, stats),
+  ]);
+  return { userId: id, merged: false };
 }
 
 export async function getConnections(env, userId) {

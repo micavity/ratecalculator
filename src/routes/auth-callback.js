@@ -1,7 +1,7 @@
 import { PROVIDERS, STATE_COOKIE, callbackUrl } from '../lib/oauth.js';
 import { cookie, getCookie } from '../lib/http.js';
 import { createSession, getSessionUser } from '../lib/session.js';
-import { signInWithAccount, LinkError } from '../lib/users.js';
+import { signInWithAccount } from '../lib/users.js';
 import { NoChannelError } from '../lib/youtube.js';
 
 // Where Twitch / Google send the creator back after they approve
@@ -23,17 +23,18 @@ export async function onRequestGet({ request, env, params }) {
   if (url.searchParams.get('error')) return fail('cancelled');
   if (!code || !state || state !== getCookie(request, STATE_COOKIE)) return fail('expired');
 
+  let result = currentUser ? 'linked' : null;
   try {
     const { account, stats } = await provider.complete(env, code, callbackUrl(request, params.provider));
-    const userId = await signInWithAccount(env, params.provider, account, stats, currentUser);
+    const { userId, merged } = await signInWithAccount(env, params.provider, account, stats, currentUser);
     if (!currentUser) headers.append('set-cookie', await createSession(env, userId));
+    if (merged) result = 'merged';
   } catch (err) {
-    if (err instanceof LinkError) return fail('already_linked');
     if (err instanceof NoChannelError) return fail('no_channel');
     console.error(`Sign-in with ${params.provider} failed:`, err.message);
     return fail('failed');
   }
 
-  headers.set('location', currentUser ? '/dashboard/?connected=1' : '/dashboard/');
+  headers.set('location', result ? `/dashboard/?connected=${result}` : '/dashboard/');
   return new Response(null, { status: 302, headers });
 }

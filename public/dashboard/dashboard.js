@@ -21,7 +21,6 @@ const MESSAGES = {
   cancelled: 'Linking was cancelled.',
   expired: 'That link expired. Please try again.',
   no_channel: "That Google account doesn't have a YouTube channel.",
-  already_linked: 'That account is already linked to a different CreatorGG profile.',
   not_configured: "That platform isn't set up yet.",
   failed: 'Something went wrong. Please try again.',
 };
@@ -196,7 +195,11 @@ async function init() {
   state = await api('/api/me');
   const params = new URLSearchParams(location.search);
   if (params.get('error')) showBanner(MESSAGES[params.get('error')] || MESSAGES.failed);
-  if (params.get('connected')) showBanner('Account linked.', 'success');
+  if (params.get('connected') === 'merged') {
+    showBanner('Account linked. It was on another CreatorGG profile, so we combined the two into one.', 'success');
+  } else if (params.get('connected')) {
+    showBanner('Account linked.', 'success');
+  }
   if (params.toString()) history.replaceState(null, '', location.pathname);
 
   renderKitLink();
