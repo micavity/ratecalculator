@@ -1067,6 +1067,25 @@ form.tab-panel[hidden] { display: none; }
 .admin-actions select { width: auto; margin-top: 0; }
 .admin-actions .toggle { margin: 0; }
 .account-id { margin-top: 12px; }
+
+.referred-list {
+  margin: 0 0 14px 16px;
+  padding-left: 14px;
+  border-left: 2px solid var(--accent-soft);
+}
+
+.referred-row {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.referred-row p { margin: 2px 0 0; }
+.referred-row a { color: var(--text); text-decoration: none; }
+.referred-money { display: flex; flex-direction: column; align-items: flex-end; }
 .account-id code { user-select: all; }
 
 /* Public media kit */

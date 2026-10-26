@@ -132,21 +132,57 @@ export async function setFounding({ request, env, params }) {
   return json({ ok: true });
 }
 
-// Affiliates with earnings, and how much is ready to pay out
-export async function payouts({ request, env }) {
+// Everyone who has referred a creator or earned a commission, with totals
+export async function affiliates({ request, env }) {
   const { response } = await requireAdmin(request, env);
   if (response) return response;
   const now = Date.now();
   const { results } = await env.DB.prepare(
-    `SELECT u.id, u.display_name AS displayName, u.slug, u.payout_email AS payoutEmail, u.referral_code AS code,
-       COALESCE(SUM(CASE WHEN c.status = 'pending' AND c.available_at <= ? THEN c.commission_cents END), 0) AS availableCents,
-       COALESCE(SUM(CASE WHEN c.status = 'pending' AND c.available_at > ? THEN c.commission_cents END), 0) AS heldCents,
-       COALESCE(SUM(CASE WHEN c.status = 'paid' THEN c.commission_cents END), 0) AS paidCents
-     FROM commissions c JOIN users u ON u.id = c.referrer_id
-     GROUP BY u.id
-     ORDER BY availableCents DESC`,
+    `SELECT r.id, r.display_name AS displayName, r.slug, r.referral_code AS code, r.payout_email AS payoutEmail,
+       (SELECT COUNT(*) FROM users u WHERE u.referred_by = r.id) AS signups,
+       (SELECT COUNT(*) FROM users u WHERE u.referred_by = r.id AND u.first_paid_at IS NOT NULL) AS paying,
+       (SELECT COUNT(*) FROM users u WHERE u.referred_by = r.id AND u.subscription_status IN ('active', 'trialing', 'past_due')) AS subscribed,
+       COALESCE((SELECT SUM(amount_cents) FROM commissions c WHERE c.referrer_id = r.id AND c.status != 'void'), 0) AS revenueCents,
+       COALESCE((SELECT SUM(commission_cents) FROM commissions c WHERE c.referrer_id = r.id AND c.status = 'pending' AND c.available_at <= ?), 0) AS availableCents,
+       COALESCE((SELECT SUM(commission_cents) FROM commissions c WHERE c.referrer_id = r.id AND c.status = 'pending' AND c.available_at > ?), 0) AS heldCents,
+       COALESCE((SELECT SUM(commission_cents) FROM commissions c WHERE c.referrer_id = r.id AND c.status = 'paid'), 0) AS paidCents
+     FROM users r
+     WHERE EXISTS (SELECT 1 FROM users u WHERE u.referred_by = r.id)
+        OR EXISTS (SELECT 1 FROM commissions c WHERE c.referrer_id = r.id)
+     ORDER BY availableCents DESC, revenueCents DESC, signups DESC`,
   ).bind(now, now).all();
-  return json({ minPayoutCents: REFERRAL.minPayoutCents, affiliates: results });
+
+  const totals = results.reduce((t, a) => {
+    for (const key of ['signups', 'paying', 'subscribed', 'revenueCents', 'availableCents', 'heldCents', 'paidCents']) t[key] += a[key];
+    return t;
+  }, { signups: 0, paying: 0, subscribed: 0, revenueCents: 0, availableCents: 0, heldCents: 0, paidCents: 0 });
+
+  return json({ minPayoutCents: REFERRAL.minPayoutCents, totals, affiliates: results });
+}
+
+// The creators one affiliate referred
+export async function affiliateDetail({ request, env, params }) {
+  const { response } = await requireAdmin(request, env);
+  if (response) return response;
+  const { results } = await env.DB.prepare(
+    `SELECT u.*,
+       COALESCE((SELECT SUM(amount_cents) FROM commissions c WHERE c.referred_id = u.id AND c.referrer_id = ? AND c.status != 'void'), 0) AS revenue_cents,
+       COALESCE((SELECT SUM(commission_cents) FROM commissions c WHERE c.referred_id = u.id AND c.referrer_id = ? AND c.status != 'void'), 0) AS commission_cents
+     FROM users u WHERE u.referred_by = ? ORDER BY u.created_at DESC LIMIT 200`,
+  ).bind(params.id, params.id, params.id).all();
+  return json({
+    referred: results.map((u) => ({
+      id: u.id,
+      displayName: u.display_name,
+      slug: u.slug,
+      joinedAt: u.created_at,
+      firstPaidAt: u.first_paid_at,
+      subscriptionStatus: u.subscription_status,
+      plan: planInfo(u),
+      revenueCents: u.revenue_cents,
+      commissionCents: u.commission_cents,
+    })),
+  });
 }
 
 // Marks everything currently available as paid, after you've sent the money

@@ -24,9 +24,10 @@ export function renderAdminPage() {
     <section class="admin-stats" id="stats"></section>
 
     <section class="panel">
-      <h2>Affiliate payouts</h2>
-      <p class="small muted">Send each affiliate their available balance through PayPal, then click "Mark as paid". Earnings are held for 30 days to cover refunds.</p>
-      <div id="payouts"></div>
+      <h2>Affiliates</h2>
+      <p class="small muted">Everyone who has referred a creator. Earnings are held for 30 days to cover refunds. To pay someone, send their available balance through PayPal, then click "Mark as paid". Use "Show referrals" to see who each affiliate brought in.</p>
+      <div class="admin-stats" id="affiliateTotals"></div>
+      <div id="affiliates"></div>
     </section>
 
     <section class="panel">
@@ -181,11 +182,58 @@ export function renderAdminPage() {
 
     const money = (cents) => '$' + (cents / 100).toFixed(2);
 
-    async function loadPayouts() {
-      const data = await api('/api/admin/payouts');
-      const box = document.getElementById('payouts');
+    const statCard = (value, label) => el('div', { class: 'stat' }, [el('span', { class: 'stat-value', text: value }), el('span', { class: 'stat-label', text: label })]);
+
+    async function toggleReferred(a, box, button) {
+      if (!box.hidden) {
+        box.hidden = true;
+        button.textContent = 'Show referrals';
+        return;
+      }
+      button.textContent = 'Loading…';
+      try {
+        const data = await api('/api/admin/affiliates/' + a.id);
+        box.replaceChildren(...(data.referred.length ? data.referred.map((r) => {
+          const status = r.subscriptionStatus === 'active' ? 'subscribed'
+            : r.subscriptionStatus === 'past_due' ? 'payment failing'
+            : r.firstPaidAt ? 'paid before, not subscribed now'
+            : 'not paying yet';
+          return el('div', { class: 'referred-row' }, [
+            el('div', {}, [
+              el('a', { href: '/' + r.slug, target: '_blank', rel: 'noopener' }, [el('strong', { text: r.displayName })]),
+              el('span', { class: 'muted', text: ' /' + r.slug }),
+              el('p', { class: 'small muted', text: 'Joined ' + new Date(r.joinedAt).toLocaleDateString() + ' · ' + planText(r.plan) + ' · ' + status }),
+            ]),
+            el('div', { class: 'small referred-money' }, [
+              el('span', { text: 'Paid ' + money(r.revenueCents) }),
+              el('span', { class: 'muted', text: 'Commission ' + money(r.commissionCents) }),
+            ]),
+          ]);
+        }) : [el('p', { class: 'small muted', text: 'No referred creators yet.' })]));
+        box.hidden = false;
+        button.textContent = 'Hide referrals';
+      } catch (err) {
+        button.textContent = 'Show referrals';
+        showBanner(err.message);
+      }
+    }
+
+    async function loadAffiliates() {
+      const data = await api('/api/admin/affiliates');
+      const t = data.totals;
+      document.getElementById('affiliateTotals').replaceChildren(
+        statCard(number.format(data.affiliates.length), 'Affiliates'),
+        statCard(number.format(t.signups), 'Referred sign-ups'),
+        statCard(number.format(t.paying), 'Became paying'),
+        statCard(number.format(t.subscribed), 'Subscribed now'),
+        statCard(money(t.revenueCents), 'Revenue from referrals'),
+        statCard(money(t.availableCents), 'Owed now'),
+        statCard(money(t.heldCents), 'Held (30 days)'),
+        statCard(money(t.paidCents), 'Paid out'),
+      );
+      const box = document.getElementById('affiliates');
       if (!data.affiliates.length) {
-        box.replaceChildren(el('p', { class: 'muted', text: 'No affiliate earnings yet.' }));
+        box.replaceChildren(el('p', { class: 'muted', text: 'No referrals yet.' }));
         return;
       }
       box.replaceChildren(...data.affiliates.map((a) => {
@@ -198,25 +246,33 @@ export function renderAdminPage() {
           try {
             const result = await api('/api/admin/payouts/' + a.id + '/paid', { method: 'POST' });
             showBanner('Marked ' + money(result.paidCents) + ' as paid.', 'success');
-            loadPayouts();
+            loadAffiliates();
           } catch (err) {
             showBanner(err.message);
           }
         });
-        return el('div', { class: 'admin-row' }, [
-          el('div', {}, [
-            el('a', { href: '/' + a.slug, target: '_blank', rel: 'noopener' }, [el('strong', { text: a.displayName })]),
-            el('span', { class: 'muted', text: ' · code ' + (a.code || '—') }),
-            el('p', { class: 'small', text: 'PayPal: ' + (a.payoutEmail || 'not added yet') }),
-            el('p', { class: 'small muted', text: 'Available ' + money(a.availableCents) + ' · Held ' + money(a.heldCents) + ' · Paid so far ' + money(a.paidCents) }),
-            ready ? el('p', { class: 'small opened', text: 'Ready to pay out' }) : el('p', { class: 'small muted', text: 'Below the ' + money(data.minPayoutCents) + ' minimum' }),
+        const referredBox = el('div', { class: 'referred-list' });
+        referredBox.hidden = true;
+        const toggle = el('button', { type: 'button', class: 'button-secondary', text: 'Show referrals' });
+        toggle.addEventListener('click', () => toggleReferred(a, referredBox, toggle));
+        return el('div', { class: 'affiliate' }, [
+          el('div', { class: 'admin-row' }, [
+            el('div', {}, [
+              el('a', { href: '/' + a.slug, target: '_blank', rel: 'noopener' }, [el('strong', { text: a.displayName })]),
+              el('span', { class: 'muted', text: ' · code ' + (a.code || '—') }),
+              el('p', { class: 'small', text: a.signups + ' sign-ups · ' + a.paying + ' became paying · ' + a.subscribed + ' subscribed now · ' + money(a.revenueCents) + ' revenue' }),
+              el('p', { class: 'small muted', text: 'Earnings: ' + money(a.availableCents) + ' available · ' + money(a.heldCents) + ' held · ' + money(a.paidCents) + ' paid' }),
+              el('p', { class: 'small muted', text: 'PayPal: ' + (a.payoutEmail || 'not added yet') }),
+              ready ? el('p', { class: 'small opened', text: 'Ready to pay out' }) : el('p', { class: 'small muted', text: a.availableCents ? 'Below the ' + money(data.minPayoutCents) + ' minimum' : 'Nothing to pay yet' }),
+            ]),
+            el('div', { class: 'admin-actions' }, [toggle, pay]),
           ]),
-          el('div', { class: 'admin-actions' }, [pay]),
+          referredBox,
         ]);
       }));
     }
 
-    loadPayouts().catch((err) => showBanner(err.message));
+    loadAffiliates().catch((err) => showBanner(err.message));
     loadStats().catch((err) => showBanner(err.message));
     loadUsers();
   </script>
