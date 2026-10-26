@@ -38,9 +38,7 @@ Put the database ID in `wrangler.toml`.
 4. **Credentials → API key**, restricted to YouTube Data API v3.
 
 ### 4. Secrets
-Cloudflare Worker → **Settings → Build → Variables and secrets**, add as secrets.
-Set the **Deploy command** to `npx wrangler deploy && node scripts/sync-secrets.mjs`,
-which attaches them to the live Worker on every deploy:
+Cloudflare Worker → **Settings → Variables and Secrets**, add as encrypted secrets:
 
 | Name | From |
 |---|---|
