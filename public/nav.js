@@ -30,7 +30,8 @@ if (nav) {
         location.href = '/';
       });
       nav.replaceChildren(
-        link('/', 'Rate calculator'),
+        link('/calculator/', 'Calculator'),
+        link('/pricing/', 'Pricing'),
         link('/dashboard/', 'Dashboard'),
         link(`/${data.slug}`, 'My kit'),
         logout,

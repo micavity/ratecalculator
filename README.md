@@ -8,7 +8,7 @@ Runs entirely on Cloudflare: a Worker with static assets, plus D1 for the databa
 
 ## Project layout
 
-- `public/`: static pages (rate calculator, login, dashboard)
+- `public/`: static pages: homepage, `calculator/`, `pricing/`, `affiliates/`, `login/`, `dashboard/`, `privacy/`, `terms/`
 - `public/rates.js`: rate formulas, shared by the calculator and media kits
 - `src/index.js`: the Worker. Static files in `public/` are served first; everything else is routed here.
 - `src/routes/`: backend routes

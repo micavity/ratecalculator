@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Affiliate program · CreatorGG</title>
+  <meta name="description" content="Earn 25% recommending CreatorGG. Creators who join through your link get 20% off, and you earn 25% of what they pay for 12 months.">
+  <meta property="og:title" content="Earn 25% recommending CreatorGG">
+  <meta property="og:description" content="Share your link with other creators. They get 20% off, and you earn 25% of what they pay for a year.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="/" aria-label="CreatorGG home">Creator<span class="gg">GG</span></a>
+      <nav class="site-nav" id="site-nav" aria-label="Main">
+        <a href="/calculator/">Calculator</a>
+        <a href="/pricing/">Pricing</a>
+        <a href="/affiliates/">Affiliates</a>
+        <a class="nav-cta" href="/login/">Get your media kit</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap page">
+    <section class="page-hero">
+      <p class="eyebrow">Affiliate program</p>
+      <h1>Earn 25% recommending CreatorGG</h1>
+      <p class="lead">Every creator gets a personal link and code. Creators who join through yours get 20% off, and you earn 25% of everything they pay for their first 12 months.</p>
+      <div class="hero-actions">
+        <a class="button button-large" href="/dashboard/">Get your link</a>
+      </div>
+      <p class="small muted">Free to join. Your link is waiting on your dashboard as soon as you sign up.</p>
+    </section>
+
+    <section class="home-section">
+      <ol class="steps">
+        <li>
+          <span class="step-number">1</span>
+          <h3>Get your link and code</h3>
+          <p>Sign up free, and find them under "Earn with CreatorGG" on your dashboard. Your free media kit's footer link counts too.</p>
+        </li>
+        <li>
+          <span class="step-number">2</span>
+          <h3>Share them</h3>
+          <p>In your bio, on stream, in videos or in creator Discords. Your code is easy to say out loud, too.</p>
+        </li>
+        <li>
+          <span class="step-number">3</span>
+          <h3>Get paid</h3>
+          <p>Earn 25% of every payment from creators you refer, for 12 months. We pay by PayPal once you reach $25.</p>
+        </li>
+      </ol>
+    </section>
+
+    <section class="home-section">
+      <div class="panel estimator">
+        <h2>What could you earn?</h2>
+        <label for="referrals">Creators you refer who subscribe to Essential: <strong id="referralCount">20</strong></label>
+        <input type="range" id="referrals" min="1" max="200" value="20">
+        <div class="estimate-results">
+          <div class="stat"><span class="stat-value" id="perMonth">$25</span><span class="stat-label">per month</span></div>
+          <div class="stat"><span class="stat-value" id="perYear">$300</span><span class="stat-label">over 12 months</span></div>
+        </div>
+        <p class="small muted">Based on monthly Essential at $4.99. Referred creators pay 20% less for their first 3 months, so you earn a little less in those months. Yearly subscribers earn you about $12.50 each up front.</p>
+      </div>
+    </section>
+
+    <section class="home-section faq">
+      <h2 class="section-title">The details</h2>
+      <details open>
+        <summary>Who counts as my referral?</summary>
+        <p>Anyone who creates a new CreatorGG account through your link within 30 days of clicking it, or who enters your code at checkout. Existing accounts and your own accounts don't count.</p>
+      </details>
+      <details>
+        <summary>When do I get paid?</summary>
+        <p>Earnings are held for 30 days in case a payment is refunded. Once your available earnings reach $25, we send them to your PayPal email, usually once a month. Add your PayPal email on your dashboard.</p>
+      </details>
+      <details>
+        <summary>What do the people I refer get?</summary>
+        <p>20% off their first 3 months of Essential. It's applied automatically when they sign up through your link, or they can type your code at checkout.</p>
+      </details>
+      <details>
+        <summary>Do I have to say I earn from it?</summary>
+        <p>Yes. When you share your link or code, make it clear you earn from it, for example with "#ad" or "affiliate link". That's the law in many places, and it keeps your audience's trust.</p>
+      </details>
+      <details>
+        <summary>Is anything not allowed?</summary>
+        <p>Don't refer yourself, create fake accounts, spam people or make misleading claims. Abuse means earnings are cancelled. Full rules are in our <a href="/terms/">Terms of Service</a>.</p>
+      </details>
+    </section>
+
+    <section class="home-section cta-final">
+      <h2>Start earning today.</h2>
+      <a class="button button-large" href="/dashboard/">Get your link</a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span>© <span class="year"></span> CreatorGG</span>
+      <nav aria-label="Footer"><a href="/calculator/">Calculator</a><a href="/pricing/">Pricing</a><a href="/affiliates/">Affiliates</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a></nav>
+    </div>
+  </footer>
+  <script src="/nav.js" defer></script>
+  <script>
+    document.querySelectorAll('.year').forEach((el) => { el.textContent = new Date().getFullYear(); });
+
+    // 25% of $4.99 a month for each subscriber
+    const slider = document.getElementById('referrals');
+    const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+    function update() {
+      const n = Number(slider.value);
+      const monthly = n * 4.99 * 0.25;
+      document.getElementById('referralCount').textContent = n;
+      document.getElementById('perMonth').textContent = usd.format(monthly);
+      document.getElementById('perYear').textContent = usd.format(monthly * 12);
+    }
+    slider.addEventListener('input', update);
+    update();
+  </script>
+</body>
+</html>

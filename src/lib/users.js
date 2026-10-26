@@ -10,7 +10,8 @@ import { PLAN_RANK, effectivePlan, planLimits } from './plans.js';
 
 // Paths that can't be used as media kit links
 export const RESERVED_SLUGS = new Set([
-  'about', 'admin', 'api', 'app', 'assets', 'auth', 'blog', 'brands', 'contact', 'creatorgg', 'vendor',
+  'about', 'admin', 'affiliate', 'affiliates', 'api', 'app', 'assets', 'auth', 'blog', 'brands', 'calculator',
+  'contact', 'creatorgg', 'faq', 'features', 'guides', 'home', 'vendor',
   'dashboard', 'help', 'index', 'kit', 'login', 'logout', 'pricing', 'privacy', 'settings',
   'signup', 'static', 'support', 'terms', 'u', 'www',
 ]);

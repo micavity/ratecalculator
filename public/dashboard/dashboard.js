@@ -1078,6 +1078,18 @@ async function init() {
   showTab(location.hash.slice(1));
   app.hidden = false;
   loadReferrals();
+  // Continue an upgrade started on the pricing page
+  let pendingUpgrade = null;
+  try {
+    pendingUpgrade = sessionStorage.getItem('cgg_upgrade');
+    sessionStorage.removeItem('cgg_upgrade');
+  } catch {}
+  if (pendingUpgrade && !state.limits.essential && state.billing.configured) {
+    const button = document.querySelector('.plan-actions button') || el('button');
+    goToStripe('/api/billing/checkout', { interval: pendingUpgrade === 'year' ? 'year' : 'month' }, button);
+  } else if (pendingUpgrade && state.limits.essential) {
+    showBanner("You're already on Essential.", 'info');
+  }
   if (justUpgraded && !state.limits.essential) waitForUpgrade();
   else if (justUpgraded) showBanner('Welcome to Essential! Everything is unlocked.', 'success');
 }

@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pricing · CreatorGG</title>
+  <meta name="description" content="CreatorGG is free forever. Essential adds your own rates and packages, detailed analytics, brand tracking links and more for $4.99 a month.">
+  <meta property="og:title" content="CreatorGG pricing">
+  <meta property="og:description" content="Free media kits for creators. Essential is $4.99/month or $49.99/year.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="/" aria-label="CreatorGG home">Creator<span class="gg">GG</span></a>
+      <nav class="site-nav" id="site-nav" aria-label="Main">
+        <a href="/calculator/">Calculator</a>
+        <a href="/pricing/">Pricing</a>
+        <a href="/affiliates/">Affiliates</a>
+        <a class="nav-cta" href="/login/">Get your media kit</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap page">
+    <section class="page-hero">
+      <h1>Simple pricing</h1>
+      <p class="lead">Start free. Upgrade when you want more control and insight. Cancel any time.</p>
+      <div class="billing-toggle" role="radiogroup" aria-label="Billing period">
+        <label><input type="radio" name="period" value="month" checked> Monthly</label>
+        <label><input type="radio" name="period" value="year"> Yearly <span class="save-tag">2 months free</span></label>
+      </div>
+    </section>
+
+    <section class="price-cards price-cards-3">
+      <div class="price-card">
+        <h2>Free</h2>
+        <p class="price"><strong>$0</strong> forever</p>
+        <p class="muted">Everything you need for a professional media kit.</p>
+        <a class="button button-secondary" href="/login/">Get started</a>
+        <ul class="checks">
+          <li>Media kit with your own link</li>
+          <li>Verified Twitch and YouTube stats</li>
+          <li>TikTok stats (self-reported)</li>
+          <li>Estimated rates for your niche</li>
+          <li>3 featured videos with their stats</li>
+          <li>Audience details and brands you've worked with</li>
+          <li>5 kit colors</li>
+          <li>PDF, share image and QR code</li>
+          <li>Kit view counts</li>
+          <li>Earn 25% with your referral link</li>
+        </ul>
+      </div>
+
+      <div class="price-card price-card-featured">
+        <span class="popular">Most popular</span>
+        <h2>Essential</h2>
+        <p class="price" data-price-month="$4.99" data-price-year="$49.99" data-per-month="/month" data-per-year="/year"><strong>$4.99</strong> <span>/month</span></p>
+        <p class="small muted yearly-note" hidden>That's about $4.17 a month, billed yearly.</p>
+        <p class="muted">For creators actively pitching brands.</p>
+        <button type="button" class="upgrade-button" id="upgradeButton">Upgrade to Essential</button>
+        <ul class="checks">
+          <li><strong>Everything in Free, plus:</strong></li>
+          <li>Set your own rates</li>
+          <li>Custom packages (e.g. "1 stream + 2 Shorts")</li>
+          <li>Remove CreatorGG branding</li>
+          <li>Reorder or hide kit sections</li>
+          <li>10 colors, any custom color and kit styles</li>
+          <li>6 featured videos</li>
+          <li>Detailed analytics: daily views, where visitors came from, countries</li>
+          <li>Tracked brand links: see when a brand opens your kit</li>
+          <li>2 extra kit versions for different brands</li>
+        </ul>
+      </div>
+
+      <div class="price-card price-card-soon">
+        <span class="popular soon">Coming soon</span>
+        <h2>Pro</h2>
+        <p class="price"><strong>$9.99</strong> /month</p>
+        <p class="muted">For creators managing several deals at once.</p>
+        <button type="button" class="button-secondary" disabled>Coming soon</button>
+        <ul class="checks">
+          <li><strong>Everything in Essential, plus:</strong></li>
+          <li>Deal tracker with deadlines and payment reminders</li>
+          <li>One-click invoices</li>
+          <li>Brand proposals with an Accept button</li>
+          <li>Growth charts on your kit</li>
+          <li>Sponsor leads for your niche</li>
+          <li>Pitch templates with your stats filled in</li>
+        </ul>
+      </div>
+    </section>
+
+    <p class="small muted center">Prices in US dollars. Tax may be added depending on where you live. Payments are handled securely by Stripe: cards, Apple Pay and Google Pay.</p>
+
+    <section class="home-section faq">
+      <h2 class="section-title">Pricing questions</h2>
+      <details>
+        <summary>Can I cancel any time?</summary>
+        <p>Yes. Cancel from "Manage subscription" on your dashboard. You keep Essential until the end of the period you've paid for, and you won't be charged again.</p>
+      </details>
+      <details>
+        <summary>What happens to my settings if I go back to Free?</summary>
+        <p>Nothing is deleted. Your kit goes back to the free look, and your custom rates, extra videos and versions are saved. Subscribe again and they're all back.</p>
+      </details>
+      <details>
+        <summary>A creator gave me their referral link. Do I get a discount?</summary>
+        <p>Yes. Sign up through a creator's link, or enter their code at checkout, and you get 20% off your first 3 months of Essential.</p>
+      </details>
+      <details>
+        <summary>Can I switch between monthly and yearly?</summary>
+        <p>Yes, any time from "Manage subscription" on your dashboard.</p>
+      </details>
+      <details>
+        <summary>Do you offer refunds?</summary>
+        <p>Payments aren't refundable for partly used periods, except where the law requires. If something went wrong, email <a href="mailto:support@creatorgg.com">support@creatorgg.com</a> and we'll do our best to make it right.</p>
+      </details>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span>© <span class="year"></span> CreatorGG</span>
+      <nav aria-label="Footer"><a href="/calculator/">Calculator</a><a href="/pricing/">Pricing</a><a href="/affiliates/">Affiliates</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a></nav>
+    </div>
+  </footer>
+  <script src="/nav.js" defer></script>
+  <script>
+    document.querySelectorAll('.year').forEach((el) => { el.textContent = new Date().getFullYear(); });
+
+    const price = document.querySelector('[data-price-month]');
+    const yearlyNote = document.querySelector('.yearly-note');
+    let period = 'month';
+    document.querySelectorAll('input[name="period"]').forEach((input) => {
+      input.addEventListener('change', () => {
+        period = input.value;
+        price.querySelector('strong').textContent = price.dataset[period === 'year' ? 'priceYear' : 'priceMonth'];
+        price.querySelector('span').textContent = price.dataset[period === 'year' ? 'perYear' : 'perMonth'];
+        yearlyNote.hidden = period !== 'year';
+      });
+    });
+
+    // Remember the choice so checkout starts once the creator is on their dashboard,
+    // even if they have to sign in first
+    document.getElementById('upgradeButton').addEventListener('click', () => {
+      try {
+        sessionStorage.setItem('cgg_upgrade', period);
+      } catch {}
+      location.href = '/dashboard/';
+    });
+  </script>
+</body>
+</html>

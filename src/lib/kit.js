@@ -117,8 +117,8 @@ function kitColor(user, essential) {
 
 export function siteHeader(viewer) {
   const links = viewer
-    ? `<a href="/">Rate calculator</a><a href="/dashboard/">Dashboard</a><a href="/${e(viewer.slug)}">My kit</a>`
-    : '<a href="/">Rate calculator</a><a class="nav-cta" href="/login/">Get your media kit</a>';
+    ? `<a href="/calculator/">Calculator</a><a href="/pricing/">Pricing</a><a href="/dashboard/">Dashboard</a><a href="/${e(viewer.slug)}">My kit</a>`
+    : '<a href="/calculator/">Calculator</a><a href="/pricing/">Pricing</a><a href="/affiliates/">Affiliates</a><a class="nav-cta" href="/login/">Get your media kit</a>';
   return `<header class="site-header">
     <div class="wrap header-inner">
       <a class="brand" href="/">Creator<span class="gg">GG</span></a>

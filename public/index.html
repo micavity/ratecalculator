@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CreatorGG: Free Sponsorship Rate Calculator for Gaming Creators</title>
-  <meta name="description" content="Free sponsorship rate calculator for creators on Twitch, YouTube and TikTok, built for gaming and every other niche. Find out what to charge for sponsored streams, videos and posts.">
+  <title>CreatorGG: Free Media Kits and Sponsorship Rates for Creators</title>
+  <meta name="description" content="Build a free media kit with verified Twitch and YouTube stats, see what to charge for sponsorships, and know when brands are looking. Made for gaming creators, works for every niche.">
   <meta property="og:title" content="CreatorGG: Know your worth. Land the deal.">
-  <meta property="og:description" content="Free sponsorship rate calculator for gaming creators on Twitch, YouTube and TikTok.">
+  <meta property="og:description" content="Free media kits with verified stats and sponsorship rates for creators on Twitch, YouTube and TikTok.">
   <meta property="og:type" content="website">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/styles.css">
@@ -16,138 +16,173 @@
     <div class="wrap header-inner">
       <a class="brand" href="/" aria-label="CreatorGG home">Creator<span class="gg">GG</span></a>
       <nav class="site-nav" id="site-nav" aria-label="Main">
-        <a href="/">Rate calculator</a>
+        <a href="/calculator/">Calculator</a>
+        <a href="/pricing/">Pricing</a>
+        <a href="/affiliates/">Affiliates</a>
         <a class="nav-cta" href="/login/">Get your media kit</a>
       </nav>
     </div>
   </header>
 
-  <main class="wrap">
-    <section class="hero">
-      <p class="eyebrow">Free sponsorship rate calculator</p>
-      <h1>Know your worth. Land the deal.</h1>
-      <p>Find out what to charge for sponsored streams, videos and posts. Enter your stats and get an estimate in seconds. Built for gaming creators, and works for any niche. Free, no sign-up.</p>
+  <main>
+    <section class="wrap home-hero">
+      <div class="home-hero-text">
+        <p class="eyebrow">Media kits for creators</p>
+        <h1>Know your worth. Land the deal.</h1>
+        <p class="lead">Build a free media kit with verified Twitch and YouTube stats, see what to charge for sponsorships, and know the moment a brand looks at it. Made for gaming creators, works for every niche.</p>
+        <div class="hero-actions">
+          <a class="button button-large" href="/login/">Get your free media kit</a>
+          <a class="button button-secondary button-large" href="/calculator/">Try the rate calculator</a>
+        </div>
+        <p class="small muted">Free forever. No credit card. Sign in with Twitch or YouTube.</p>
+      </div>
+
+      <div class="example-kit" aria-label="Example media kit">
+        <span class="example-label">Example kit</span>
+        <div class="example-head">
+          <div class="avatar avatar-fallback example-avatar" aria-hidden="true">N</div>
+          <div>
+            <p class="example-name">Nova Plays</p>
+            <p class="small muted">Variety streamer · FPS and late-night horror</p>
+          </div>
+        </div>
+        <div class="example-stats">
+          <div class="stat"><span class="stat-value">12.8K</span><span class="stat-label">YouTube subscribers</span><span class="badge">✓ Verified</span></div>
+          <div class="stat"><span class="stat-value">5.4K</span><span class="stat-label">Avg views / video</span><span class="badge">✓ Verified</span></div>
+          <div class="stat"><span class="stat-value">4.2K</span><span class="stat-label">Twitch followers</span><span class="badge">✓ Verified</span></div>
+          <div class="stat"><span class="stat-value">4.8%</span><span class="stat-label">Engagement</span><span class="badge">✓ Verified</span></div>
+        </div>
+        <div class="rate"><span>YouTube integration</span><span class="amount">$60 – $150</span></div>
+        <div class="rate"><span>Sponsored stream (per hour)</span><span class="amount">$65 – $170</span></div>
+        <div class="example-alert">👀 <strong>Razer</strong> opened your kit · 2 hours ago</div>
+      </div>
     </section>
 
-    <div class="layout">
-      <form id="calc" class="panel" autocomplete="off" novalidate>
-        <fieldset class="platforms">
-          <legend>Your platforms</legend>
-          <label class="chip"><input type="checkbox" name="platform" value="twitch" checked> Twitch</label>
-          <label class="chip"><input type="checkbox" name="platform" value="youtube" checked> YouTube</label>
-          <label class="chip"><input type="checkbox" name="platform" value="tiktok"> TikTok</label>
-        </fieldset>
+    <section class="wrap home-section">
+      <h2 class="section-title">How it works</h2>
+      <ol class="steps">
+        <li>
+          <span class="step-number">1</span>
+          <h3>Sign in with Twitch or YouTube</h3>
+          <p>We pull your stats straight from the platform, so brands see they're real. Read-only access, nothing posted.</p>
+        </li>
+        <li>
+          <span class="step-number">2</span>
+          <h3>Make it yours</h3>
+          <p>Add your bio, games or topics, featured videos, audience and the brands you've worked with. Your rates are worked out for you.</p>
+        </li>
+        <li>
+          <span class="step-number">3</span>
+          <h3>Send it to brands</h3>
+          <p>Share one link, a PDF or a QR code. See who's looking, and follow up at the right moment.</p>
+        </li>
+      </ol>
+    </section>
 
-        <fieldset class="group" data-platform="twitch">
-          <legend>Twitch</legend>
-          <label>Average concurrent viewers
-            <input type="number" name="twitchViewers" min="0" inputmode="numeric" placeholder="e.g. 80">
-            <small>Your average viewers over the last 30 days (shown in Twitch analytics).</small>
-          </label>
-          <label>Typical stream length (hours)
-            <input type="number" name="twitchHours" min="1" max="24" step="0.5" value="3" inputmode="decimal">
-          </label>
-        </fieldset>
-
-        <fieldset class="group" data-platform="youtube">
-          <legend>YouTube</legend>
-          <label>Average views per video
-            <input type="number" name="ytViews" min="0" inputmode="numeric" placeholder="e.g. 5000">
-            <small>Average of your last 10 long-form videos, after about 30 days.</small>
-          </label>
-          <label>Average views per Short <span class="opt">optional</span>
-            <input type="number" name="ytShortsViews" min="0" inputmode="numeric" placeholder="e.g. 12000">
-          </label>
-          <label>Engagement rate % <span class="opt">optional</span>
-            <input type="number" name="ytEngagement" min="0" max="100" step="0.1" inputmode="decimal" placeholder="e.g. 4">
-            <small>(Likes + comments) ÷ views × 100. About 4% is typical.</small>
-          </label>
-        </fieldset>
-
-        <fieldset class="group" data-platform="tiktok">
-          <legend>TikTok</legend>
-          <label>Average views per video
-            <input type="number" name="ttViews" min="0" inputmode="numeric" placeholder="e.g. 20000">
-            <small>Average of your last 10–20 videos. Leave out one-off viral hits.</small>
-          </label>
-          <label>Engagement rate % <span class="opt">optional</span>
-            <input type="number" name="ttEngagement" min="0" max="100" step="0.1" inputmode="decimal" placeholder="e.g. 6">
-            <small>(Likes + comments + shares) ÷ views × 100. About 6% is typical.</small>
-          </label>
-        </fieldset>
-
-        <fieldset class="group">
-          <legend>Your audience</legend>
-          <label>Where most of your audience is
-            <select name="region">
-              <option value="tier1">Mostly US, UK, Canada, Australia</option>
-              <option value="mixed" selected>Mixed / worldwide</option>
-              <option value="other">Mostly other regions</option>
-            </select>
-          </label>
-          <label>Your niche
-            <select name="focus">
-            <optgroup label="Gaming">
-              <option value="gaming" selected>Gaming (general)</option>
-              <option value="competitive">Competitive / esports</option>
-              <option value="tech">PC, hardware &amp; gear</option>
-              <option value="mobile">Mobile gaming</option>
-            </optgroup>
-            <optgroup label="Other niches">
-              <option value="finance">Finance &amp; investing</option>
-              <option value="business">Business &amp; marketing</option>
-              <option value="technology">Tech &amp; gadgets</option>
-              <option value="automotive">Cars &amp; automotive</option>
-              <option value="education">Education &amp; how-to</option>
-              <option value="health">Health &amp; fitness</option>
-              <option value="beauty">Beauty &amp; skincare</option>
-              <option value="fashion">Fashion</option>
-              <option value="parenting">Parenting &amp; family</option>
-              <option value="travel">Travel</option>
-              <option value="food">Food &amp; cooking</option>
-              <option value="sports">Sports</option>
-              <option value="lifestyle">Lifestyle &amp; vlogging</option>
-              <option value="entertainment">Comedy &amp; entertainment</option>
-              <option value="music">Music</option>
-            </optgroup>
-          </select>
-          </label>
-        </fieldset>
-      </form>
-
-      <section class="panel results" aria-live="polite">
-        <h2>Your estimated rates</h2>
-        <div id="results">
-          <p class="empty">Enter your stats to see your rates.</p>
+    <section class="wrap home-section">
+      <h2 class="section-title">Everything you need to pitch sponsors</h2>
+      <div class="feature-grid">
+        <div class="feature">
+          <h3>✓ Verified stats</h3>
+          <p>Followers, subscribers, average views and engagement come straight from Twitch and YouTube, and refresh automatically.</p>
         </div>
-        <div class="actions" hidden id="actions">
-          <button type="button" id="copy">Copy my rates</button>
-          <span id="copied" class="copied" hidden>Copied!</span>
+        <div class="feature">
+          <h3>💰 Know what to charge</h3>
+          <p>Rate estimates for streams, videos, Shorts and TikToks, adjusted for your niche and audience. Or set your own rates and packages.</p>
         </div>
-        <p class="disclaimer">These are estimates based on common industry rules of thumb, not guarantees. Real offers vary by brand, campaign and your negotiation. Use the range as a starting point.</p>
-      </section>
-    </div>
+        <div class="feature">
+          <h3>🎬 Featured content</h3>
+          <p>Show off your best videos and clips, with their real views, likes and comments right underneath.</p>
+        </div>
+        <div class="feature">
+          <h3>📤 Share anywhere</h3>
+          <p>Your own link, a PDF for emails, a share image for X and Discord, and a QR code for overlays.</p>
+        </div>
+        <div class="feature">
+          <h3>👀 Know who's looking</h3>
+          <p>See your kit's views, where visitors came from, and exactly when a brand opens the link you sent them.</p>
+        </div>
+        <div class="feature">
+          <h3>🎯 Tailored versions</h3>
+          <p>Make different versions of your kit for different kinds of brands, each with its own videos and rates.</p>
+        </div>
+      </div>
+    </section>
 
-    <section class="tips">
-      <h2>Tips for pricing your first deals</h2>
-      <ul>
-        <li><strong>Quote the top of your range first.</strong> Brands expect to negotiate.</li>
-        <li><strong>Charge extra for usage rights.</strong> If a brand wants to run your content as an ad, that's usually +30–100%.</li>
-        <li><strong>Exclusivity costs more.</strong> Agreeing not to work with competitors for a period should add to the price.</li>
-        <li><strong>Bundles sell well.</strong> Offer a stream + video + short package at a small discount.</li>
-        <li><strong>Get it in writing.</strong> Agree on deliverables, deadlines and payment date before you start.</li>
-      </ul>
+    <section class="wrap home-section">
+      <div class="band">
+        <div>
+          <h2>Not sure what to charge?</h2>
+          <p class="muted">Our free rate calculator estimates your sponsorship rates in seconds. No sign-up needed.</p>
+        </div>
+        <a class="button button-large" href="/calculator/">Open the calculator</a>
+      </div>
+    </section>
+
+    <section class="wrap home-section">
+      <h2 class="section-title">Simple pricing</h2>
+      <div class="price-cards">
+        <div class="price-card">
+          <h3>Free</h3>
+          <p class="price"><strong>$0</strong> forever</p>
+          <p class="muted">A full media kit with verified stats, estimated rates, featured videos and sharing tools.</p>
+          <a class="button button-secondary" href="/login/">Get started</a>
+        </div>
+        <div class="price-card price-card-featured">
+          <h3>Essential</h3>
+          <p class="price"><strong>$4.99</strong> /month</p>
+          <p class="muted">Your own rates and packages, no CreatorGG branding, detailed analytics, brand tracking links and more.</p>
+          <a class="button" href="/pricing/">See everything in Essential</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap home-section">
+      <div class="band band-accent">
+        <div>
+          <h2>Earn 25% recommending CreatorGG</h2>
+          <p class="muted">Share your link with other creators. They get 20% off, and you earn 25% of what they pay for a year.</p>
+        </div>
+        <a class="button button-secondary button-large" href="/affiliates/">How it works</a>
+      </div>
+    </section>
+
+    <section class="wrap home-section faq">
+      <h2 class="section-title">Questions</h2>
+      <details>
+        <summary>Is it really free?</summary>
+        <p>Yes. The media kit, verified stats, rate estimates and sharing tools are free forever. Essential adds extras for $4.99 a month, and you never need it to use CreatorGG.</p>
+      </details>
+      <details>
+        <summary>Do you post anything or see my password?</summary>
+        <p>No. Signing in with Twitch or YouTube only gives us read-only access to your public channel stats. We never post, and we never see your password.</p>
+      </details>
+      <details>
+        <summary>I'm not a gaming creator. Can I use it?</summary>
+        <p>Absolutely. Rates adjust for finance, beauty, tech, lifestyle, fitness and many more niches.</p>
+      </details>
+      <details>
+        <summary>What about TikTok?</summary>
+        <p>Sign in with Twitch or YouTube, then add your TikTok stats yourself. They're shown on your kit as self-reported.</p>
+      </details>
+      <details>
+        <summary>Why would brands trust my kit?</summary>
+        <p>Stats from Twitch and YouTube are pulled directly from the platform and marked "Verified", and featured videos show their real numbers. Anything you type in yourself is clearly labeled "self-reported".</p>
+      </details>
+    </section>
+
+    <section class="wrap home-section cta-final">
+      <h2>Your next sponsor is one link away.</h2>
+      <a class="button button-large" href="/login/">Get your free media kit</a>
     </section>
   </main>
 
   <footer class="site-footer">
     <div class="wrap footer-inner">
       <span>© <span class="year"></span> CreatorGG</span>
-      <nav aria-label="Footer"><a href="/">Rate calculator</a><a href="/login/">Get your media kit</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a></nav>
+      <nav aria-label="Footer"><a href="/calculator/">Calculator</a><a href="/pricing/">Pricing</a><a href="/affiliates/">Affiliates</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a></nav>
     </div>
   </footer>
-
-  <script type="module" src="/app.js"></script>
   <script src="/nav.js" defer></script>
   <script>document.querySelectorAll(".year").forEach((el) => { el.textContent = new Date().getFullYear(); });</script>
 </body>

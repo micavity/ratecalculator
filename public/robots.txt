@@ -1,0 +1,7 @@
+User-agent: *
+Disallow: /dashboard/
+Disallow: /admin
+Disallow: /api/
+Disallow: /auth/
+
+Sitemap: https://creatorgg.com/sitemap.xml
