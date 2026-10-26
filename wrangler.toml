@@ -15,9 +15,9 @@ not_found_handling = "404-page"
 [vars]
 STRIPE_PRICE_MONTHLY = "price_1UUskPLelV3WIKMlwTXcetQ5"
 STRIPE_PRICE_YEARLY = "price_1UUskPLelV3WIKMlMR8INnqV"
-# Pro prices. Pro shows as "Coming soon" until both are filled in.
-# STRIPE_PRICE_PRO_MONTHLY = ""
-# STRIPE_PRICE_PRO_YEARLY = ""
+# Pro prices. Pro shows as "Coming soon" if these are removed.
+STRIPE_PRICE_PRO_MONTHLY = "price_1UUuraLelV3WIKMlZARMlnXF"
+STRIPE_PRICE_PRO_YEARLY = "price_1UUurtLelV3WIKMlVuHxQ7vp"
 
 # Refresh stale creator stats every 6 hours
 [triggers]

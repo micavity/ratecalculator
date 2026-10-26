@@ -32,7 +32,7 @@ Free media kits and sponsorship rate estimates for creators. Built for gaming cr
 |---|---|---|
 | Free | $0 | Live |
 | Essential | $4.99/month or $49.99/year | Live |
-| Pro | $9.99/month or $99.99/year | Built (deal tracker). Shown as "Coming soon" until its Stripe prices are added |
+| Pro | $9.99/month or $99.99/year | Live (deal tracker); more Pro features planned |
 | Ultra | $19.99/month | Planned; the only plan with AI features |
 
 - Essential is priced low on purpose ("mess the game up"): an impulse price that undercuts other creator tools and gets people paying. Prices are easier to raise later than to win people back.
@@ -82,7 +82,7 @@ Free media kits and sponsorship rate estimates for creators. Built for gaming cr
 - **Deal tracker (Pro):** Deals tab with stages (Pitched → Negotiating → Agreed → Delivered → Paid, or Lost), amounts in 15 currencies, deliverables, content and payment due dates with overdue alerts, totals (earned this month, owed, pipeline), brand autofill from earlier deals and the kit's brand list, brand logos, and "Start a deal" from tracked links (deals show when the brand opens the kit). Deals are kept, hidden, if Pro lapses, and move over when profiles merge.
 
 ### Waiting on / to do outside the code
-- [ ] **Selling Pro** (when it has 2–3 features): in Stripe, add a Pro product with $9.99/month and $99.99/year prices, send Claude the two price IDs, and add Pro to the Customer Portal's plan switching. Until then, gift Pro to friends from `/admin`.
+- [ ] In Stripe's Customer Portal settings, add Pro (both prices) to plan switching, so subscribers can move down to Essential or change monthly/yearly themselves.
 - [ ] **Google verification** of the `youtube.readonly` scope (submitted). Until approved, YouTube sign-in shows "Google hasn't verified this app" and is capped at 100 users. **Don't launch widely until this is approved.**
 - [ ] **UK broadband filters** block the new domain for some people (a UK friend couldn't open `creatorgg.com` but could open the workers.dev address). Submit `creatorgg.com` for categorization at Cisco Talos, Fortinet and Palo Alto Networks, and report it to Sky, BT, Virgin Media and TalkTalk. Usually clears up as the domain ages.
 - [ ] Turn on **Always Use HTTPS** (Cloudflare → creatorgg.com → SSL/TLS → Edge Certificates).
