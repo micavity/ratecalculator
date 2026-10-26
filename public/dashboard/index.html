@@ -178,6 +178,81 @@
         <div id="dealsBody"></div>
       </section>
 
+      <section class="panel pro-panel" id="invoicesPanel">
+        <div class="section-head">
+          <h2>Invoices <span class="plan-pill">Pro</span></h2>
+          <button type="button" id="newInvoice">Create invoice</button>
+        </div>
+        <p class="small muted">Bill brands with a professional invoice. Download it as a PDF, or send them the link.</p>
+        <div id="invoicesBody"></div>
+      </section>
+
+      <dialog class="deal-dialog invoice-dialog" id="invoiceDialog" aria-labelledby="invoiceDialogTitle">
+        <form id="invoiceForm" novalidate>
+          <div class="section-head">
+            <h2 id="invoiceDialogTitle">Create invoice</h2>
+            <button type="button" class="button-link" id="closeInvoice" aria-label="Close">Close</button>
+          </div>
+          <p class="alert alert-error" id="invoiceError" hidden></p>
+          <div class="field-row">
+            <label>Invoice number <input type="text" name="number" maxlength="30" required></label>
+            <label>Invoice date <input type="date" name="issuedOn" required></label>
+            <label>Due date <input type="date" name="dueOn"></label>
+            <label>Currency <select name="currency"></select></label>
+          </div>
+
+          <fieldset class="group">
+            <legend>Your details</legend>
+            <p class="small muted">Saved for your next invoice.</p>
+            <div class="field-row">
+              <label>Name or business name <input type="text" name="senderName" maxlength="100" required></label>
+              <label>Email <input type="email" name="senderEmail" maxlength="254"></label>
+            </div>
+            <div class="field-row">
+              <label>Address <span class="opt">optional</span><textarea name="senderAddress" rows="2" maxlength="300"></textarea></label>
+              <label>Tax ID <span class="opt">optional</span><input type="text" name="senderTaxId" maxlength="60" placeholder="e.g. VAT or EIN"></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="group">
+            <legend>Bill to</legend>
+            <div class="field-row">
+              <label>Brand or company <input type="text" name="billToName" maxlength="100" required></label>
+              <label>Contact name <input type="text" name="billToContact" maxlength="100"></label>
+            </div>
+            <div class="field-row">
+              <label>Email <input type="email" name="billToEmail" maxlength="254"></label>
+              <label>Address <span class="opt">optional</span><textarea name="billToAddress" rows="2" maxlength="300"></textarea></label>
+            </div>
+          </fieldset>
+
+          <fieldset class="group" data-field="items">
+            <legend>What you're billing for</legend>
+            <div class="row-editor" id="invoiceItems"></div>
+            <div class="actions">
+              <button type="button" class="button-secondary" id="addInvoiceItem">Add a line</button>
+            </div>
+            <div class="field-row">
+              <label>Tax % <span class="opt">optional</span><input type="number" name="taxRate" min="0" max="100" step="0.01" inputmode="decimal"></label>
+              <label>Tax name <span class="opt">optional</span><input type="text" name="taxLabel" maxlength="30" placeholder="e.g. VAT, GST"></label>
+            </div>
+            <p class="invoice-total-preview" id="invoiceTotal"></p>
+          </fieldset>
+
+          <label>How to pay you
+            <textarea name="paymentDetails" rows="3" maxlength="600" placeholder="e.g. PayPal: you@example.com&#10;or your bank name, account name and account number"></textarea>
+            <small>Shown on the invoice and saved for next time.</small>
+          </label>
+          <label>Notes <span class="opt">optional</span>
+            <textarea name="notes" rows="2" maxlength="1000" placeholder="e.g. Payment due within 30 days. Thanks for working with me!"></textarea>
+          </label>
+          <div class="save-bar deal-actions">
+            <button type="submit" id="saveInvoice">Save invoice</button>
+            <button type="button" class="button-link danger-link" id="deleteInvoice" hidden>Delete invoice</button>
+          </div>
+        </form>
+      </dialog>
+
       <dialog class="deal-dialog" id="dealDialog" aria-labelledby="dealDialogTitle">
         <form id="dealForm" novalidate>
           <div class="section-head">

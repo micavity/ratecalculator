@@ -18,6 +18,7 @@ See `PROJECT_NOTES.md` for decisions, status and the roadmap.
   - `auth-start.js`, `auth-callback.js`: Twitch and YouTube sign-in
   - `admin.js`: admin page and API
   - `deals.js`: Pro deal tracker API
+  - `invoices.js`: Pro invoices API, and the shareable invoice page at `/i/<id>`
   - `games.js`: game suggestions with Twitch box art (`src/lib/games.js` matches listed games on save)
   - the rest: dashboard API (profile, analytics, tracked links, kit versions)
 - `src/lib/`: shared backend code

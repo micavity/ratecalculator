@@ -79,6 +79,7 @@ Free media kits and sponsorship rate estimates for creators. Built for gaming cr
 - Daily stat snapshots (saved by the cron job, `src/lib/snapshots.js`), the start of Pro's growth charts. YouTube rows are deleted after 30 days (YouTube's rules); Twitch rows and typed-in platforms are kept. Long-term YouTube history would need the YouTube Analytics API.
 - "Complete your kit" checklist at the top of the dashboard Overview (hideable, disappears when done)
 - **Pro plan setup:** Pro checkout, "Switch to Pro" for Essential subscribers (charges the difference now, same renewal date), gifts remembered so they come back when a paid plan ends, Pro card on `/pricing/` that switches on by itself once Pro's prices are set
+- **Invoices (Pro):** "Invoice" on a deal (or "Create invoice") makes a numbered invoice prefilled from the deal: creator's details and payment instructions (saved for next time), bill-to, line items, optional tax, notes. Shared at `/i/<random id>` (always light, prints to PDF), so brands can open the link. Paying an invoice marks its deal paid and the other way round. Sent links keep working if Pro lapses; deleting the account deletes them.
 - **Game box art:** games listed on a kit show Twitch box art (matched on save, suggestions while typing, topics stay plain tags; non-game Twitch categories like Music are left out). Art for older profiles is added by the cron job.
 - **Instagram, Facebook and X** (self-reported): stats on the dashboard, kit cards, rate estimates (Reels, posts, Stories, videos, X posts) and the calculator
 - **Deal tracker (Pro):** Deals tab with stages (Pitched → Negotiating → Agreed → Delivered → Paid, or Lost), amounts in 15 currencies, deliverables, content and payment due dates with overdue alerts, totals (earned this month, owed, pipeline), brand autofill from earlier deals and the kit's brand list, brand logos, and "Start a deal" from tracked links (deals show when the brand opens the kit). Deals are kept, hidden, if Pro lapses, and move over when profiles merge.
@@ -99,7 +100,7 @@ Free media kits and sponsorship rate estimates for creators. Built for gaming cr
 
 1. **Before the public launch:** example kits from friends; maybe email alerts ("Razer opened your kit", welcome email; needs an email-sending service); daily stat snapshots (done).
 2. **TikTok verified stats** (TikTok Login Kit; needs TikTok app approval, so start early). Then maybe Instagram (Meta API, needs approval) and Kick.
-3. **Pro ($9.99):** ~~deal tracker~~ (done), invoices, brand proposals with an Accept button, growth charts, sponsor leads (from creators' brand lists plus a curated list), pitch templates.
+3. **Pro ($9.99):** ~~deal tracker~~ (done), ~~invoices~~ (done), brand proposals with an Accept button, growth charts, sponsor leads (from creators' brand lists plus a curated list), pitch templates.
 4. **Ultra ($19.99):** AI pitch writer, AI bio and kit copy, automatic sponsor detection.
 5. **Brand side (the bigger money later):** add a "list me in the brand directory" opt-in early, then brand search ($49–299/mo) and campaigns (indie game devs first; fee per campaign or a cut of deals).
 6. **Affiliate extras:** per-creator commission rates for ambassadors, custom codes.

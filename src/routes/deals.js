@@ -113,6 +113,7 @@ function dealFields(d) {
     notes: d.notes || '',
     linkId: d.link_id || '',
     linkLabel: d.link_label || '',
+    invoice: d.invoice ? JSON.parse(d.invoice) : null,
     lastOpenedAt: d.last_opened_at || null,
     createdAt: d.created_at,
     updatedAt: d.updated_at,
@@ -127,7 +128,9 @@ export async function onRequestGet({ request, env }) {
     return json({ ...LOCKED, saved: count });
   }
   const { results } = await env.DB.prepare(`SELECT d.*, l.label AS link_label,
-      (SELECT MAX(e.at) FROM link_events e WHERE e.user_id = d.user_id AND e.link_id = d.link_id) AS last_opened_at
+      (SELECT MAX(e.at) FROM link_events e WHERE e.user_id = d.user_id AND e.link_id = d.link_id) AS last_opened_at,
+      (SELECT json_object('id', i.id, 'number', i.number, 'status', i.status, 'dueOn', i.due_on) FROM invoices i
+        WHERE i.deal_id = d.id AND i.user_id = d.user_id AND i.status != 'void' ORDER BY i.created_at DESC LIMIT 1) AS invoice
     FROM deals d LEFT JOIN tracked_links l ON l.id = d.link_id AND l.user_id = d.user_id
     WHERE d.user_id = ? ORDER BY d.updated_at DESC LIMIT ?`).bind(user.id, limits.deals).all();
   return json({ deals: results.map(dealFields), stages: STAGES, currencies: CURRENCIES });
@@ -162,14 +165,26 @@ export async function onRequestPut({ request, env, params }) {
   const { values, error, field } = await readDeal(env, user, await request.json().catch(() => ({})));
   if (error) return json({ error, field }, 400);
   const columns = Object.keys(values);
-  await env.DB.prepare(`UPDATE deals SET ${columns.map((c) => `${c} = ?`).join(', ')}, updated_at = ? WHERE id = ? AND user_id = ?`)
-    .bind(...Object.values(values), Date.now(), existing.id, user.id).run();
+  const statements = [
+    env.DB.prepare(`UPDATE deals SET ${columns.map((c) => `${c} = ?`).join(', ')}, updated_at = ? WHERE id = ? AND user_id = ?`)
+      .bind(...Object.values(values), Date.now(), existing.id, user.id),
+  ];
+  // A paid deal means its invoice was paid too
+  if (values.stage === 'paid') {
+    statements.push(env.DB.prepare("UPDATE invoices SET status = 'paid', paid_on = ?, updated_at = ? WHERE deal_id = ? AND user_id = ? AND status = 'unpaid'")
+      .bind(values.paid_on || new Date().toISOString().slice(0, 10), Date.now(), existing.id, user.id));
+  }
+  await env.DB.batch(statements);
   return json({ ok: true });
 }
 
 export async function onRequestDelete({ request, env, params }) {
   const { user, response } = await signedIn(request, env, true);
   if (response) return response;
-  await env.DB.prepare('DELETE FROM deals WHERE id = ? AND user_id = ?').bind(params.id, user.id).run();
+  // Invoices already sent stay, they just stop pointing at the deal
+  await env.DB.batch([
+    env.DB.prepare('UPDATE invoices SET deal_id = NULL WHERE deal_id = ? AND user_id = ?').bind(params.id, user.id),
+    env.DB.prepare('DELETE FROM deals WHERE id = ? AND user_id = ?').bind(params.id, user.id),
+  ]);
   return json({ ok: true });
 }

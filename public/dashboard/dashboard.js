@@ -1441,6 +1441,10 @@ function dealBadges(d) {
     badges.push([dueText('Payment', d.paymentDue), daysUntil(d.paymentDue) < 0 ? 'deal-badge-warning' : '']);
   }
   if (d.stage === 'paid' && d.paidOn) badges.push([`Paid ${shortDate(d.paidOn)}`, 'deal-badge-good']);
+  if (d.invoice && d.stage !== 'paid') {
+    const [label, kind] = invoiceState(d.invoice);
+    badges.push([`Invoice ${d.invoice.number} · ${label.toLowerCase()}`, kind]);
+  }
   if (d.lastOpenedAt && !['paid', 'lost'].includes(d.stage)) {
     badges.push([`Opened your kit ${relativeTime(d.lastOpenedAt)}`, 'deal-badge-good']);
   } else if (d.linkLabel && !['paid', 'lost'].includes(d.stage)) {
@@ -1510,6 +1514,17 @@ function dealRow(d) {
 
   const edit = el('button', { type: 'button', class: 'button-link', text: 'Edit' });
   edit.addEventListener('click', () => openDeal(d));
+  const side = [stage];
+  if (['agreed', 'delivered', 'paid'].includes(d.stage) || d.invoice) {
+    const invoice = d.invoice && invoices.find((i) => i.id === d.invoice.id);
+    const button = el('button', { type: 'button', class: 'button-secondary deal-invoice', text: invoice ? 'View invoice' : 'Invoice' });
+    button.addEventListener('click', () => {
+      if (invoice) window.open(`/i/${invoice.id}`, '_blank', 'noopener');
+      else openInvoice(null, d);
+    });
+    side.push(button);
+  }
+  side.push(edit);
   const main = el('div', { class: 'deal-main' }, [
     el('div', { class: 'deal-title' }, [
       el('strong', { text: d.brand }),
@@ -1523,7 +1538,7 @@ function dealRow(d) {
   return el('div', { class: `deal stage-${d.stage}${d.stage === 'lost' ? ' deal-lost' : ''}` }, [
     brandLogo(d),
     main,
-    el('div', { class: 'deal-side' }, [stage, edit]),
+    el('div', { class: 'deal-side' }, side),
   ]);
 }
 
@@ -1548,7 +1563,7 @@ function renderDeals() {
 
 function renderDealsLocked(saved) {
   const parts = [
-    el('p', { text: 'Pro adds a deal tracker: every sponsorship from first pitch to payment, with deadlines, payment due dates, totals of what you\'ve earned and what you\'re owed, and alerts when a brand opens your kit.' }),
+    el('p', { text: 'Pro adds a deal tracker: every sponsorship from first pitch to payment, with deadlines, payment due dates, totals of what you\'ve earned and what you\'re owed, alerts when a brand opens your kit, and one-click invoices.' }),
   ];
   if (saved) parts.push(el('p', { class: 'small', text: `You have ${saved} saved deal${saved === 1 ? '' : 's'}. ${saved === 1 ? 'It\'s' : 'They\'re'} kept safe and will be back when you upgrade.` }));
   if (state.billing.proAvailable) {
@@ -1573,10 +1588,12 @@ async function loadDeals() {
   }
   if (data.locked) {
     renderDealsLocked(data.saved);
+    loadInvoices();
     return;
   }
   deals = data.deals;
   dealCurrencies = data.currencies;
+  await loadInvoices();
   renderDeals();
 }
 
@@ -1692,6 +1709,282 @@ document.getElementById('deleteDeal').addEventListener('click', async () => {
   } catch (err) {
     dealError.textContent = err.message;
     dealError.hidden = false;
+  }
+});
+
+// Invoices (Pro)
+
+const invoicesPanel = document.getElementById('invoicesPanel');
+const invoicesBody = document.getElementById('invoicesBody');
+const invoiceDialog = document.getElementById('invoiceDialog');
+const invoiceForm = document.getElementById('invoiceForm');
+const invoiceError = document.getElementById('invoiceError');
+const invoiceItemsEditor = document.getElementById('invoiceItems');
+let invoices = [];
+let invoiceSettings = {};
+let nextInvoiceNumber = 'INV-0001';
+let editingInvoice = null;
+let invoiceDealId = '';
+
+function invoiceUrl(invoice) {
+  return `${location.origin}/i/${invoice.id}`;
+}
+
+function invoiceState(invoice) {
+  if (invoice.status === 'paid') return ['Paid', 'deal-badge-good'];
+  if (invoice.status === 'void') return ['Void', ''];
+  if (invoice.dueOn && daysUntil(invoice.dueOn) < 0) return ['Overdue', 'deal-badge-warning'];
+  return ['Unpaid', ''];
+}
+
+function addInvoiceItem(values = {}) {
+  const row = el('div', { class: 'row-item invoice-item' });
+  const fields = [['description', 'Description', 'e.g. YouTube integration (60–90 sec)', 'text'], ['quantity', 'Qty', '1', 'number'], ['unitPrice', 'Price', '0.00', 'number']];
+  for (const [key, label, placeholder, type] of fields) {
+    const input = el('input', { type, 'data-key': key, placeholder, 'aria-label': label });
+    if (type === 'number') {
+      input.min = '0';
+      input.step = key === 'quantity' ? '1' : '0.01';
+      input.inputMode = 'decimal';
+    } else {
+      input.maxLength = 200;
+    }
+    input.value = values[key] ?? '';
+    input.addEventListener('input', renderInvoiceTotal);
+    row.append(el('label', { class: key === 'description' ? 'item-description' : '' }, [document.createTextNode(label), input]));
+  }
+  const remove = el('button', { type: 'button', class: 'button-link', text: 'Remove' });
+  remove.addEventListener('click', () => {
+    row.remove();
+    renderInvoiceTotal();
+  });
+  row.append(remove);
+  invoiceItemsEditor.append(row);
+}
+
+function readInvoiceItems() {
+  return [...invoiceItemsEditor.querySelectorAll('.invoice-item')].map((row) => Object.fromEntries(
+    [...row.querySelectorAll('input[data-key]')].map((input) => [input.dataset.key, input.value.trim()]),
+  )).filter((i) => i.description || i.unitPrice);
+}
+
+function renderInvoiceTotal() {
+  const f = invoiceForm.elements;
+  const subtotal = readInvoiceItems().reduce((sum, i) => sum + (Number(i.quantity) || 1) * (Number(i.unitPrice) || 0), 0);
+  const rate = Number(f.taxRate.value) || 0;
+  const total = subtotal + (subtotal * rate) / 100;
+  document.getElementById('invoiceTotal').textContent = `Total: ${formatMoney(Math.round(total * 100) / 100, f.currency.value || 'USD')}`;
+}
+
+function addDays(days) {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return isoDay(d);
+}
+
+// Opens the editor for an existing invoice, or a new one (optionally from a deal)
+function openInvoice(invoice, deal = null) {
+  editingInvoice = invoice;
+  const f = invoiceForm.elements;
+  invoiceForm.reset();
+  invoiceForm.querySelectorAll('.invalid').forEach((input) => input.classList.remove('invalid'));
+  invoiceError.hidden = true;
+  f.currency.replaceChildren(...dealCurrencies.map((c) => el('option', { value: c, text: c })));
+
+  const p = state.profile;
+  const sender = invoice ? invoice.sender : invoiceSettings;
+  f.senderName.value = sender.name || (invoice ? '' : p.displayName || '');
+  f.senderEmail.value = sender.email || (invoice ? '' : p.contactEmail || '');
+  f.senderAddress.value = sender.address || '';
+  f.senderTaxId.value = sender.taxId || '';
+  f.paymentDetails.value = sender.paymentDetails || '';
+
+  if (invoice) {
+    invoiceDealId = invoice.dealId;
+    f.number.value = invoice.number;
+    f.issuedOn.value = invoice.issuedOn;
+    f.dueOn.value = invoice.dueOn;
+    f.currency.value = invoice.currency;
+    f.billToName.value = invoice.billTo.name || '';
+    f.billToContact.value = invoice.billTo.contact || '';
+    f.billToEmail.value = invoice.billTo.email || '';
+    f.billToAddress.value = invoice.billTo.address || '';
+    f.taxRate.value = invoice.taxRate ?? '';
+    f.taxLabel.value = invoice.taxLabel;
+    f.notes.value = invoice.notes;
+  } else {
+    invoiceDealId = deal?.id || '';
+    f.number.value = nextInvoiceNumber;
+    f.issuedOn.value = isoDay();
+    f.dueOn.value = deal?.paymentDue || addDays(30);
+    f.currency.value = deal?.currency || 'USD';
+    f.billToName.value = deal?.brand || '';
+    f.billToContact.value = deal?.contactName || '';
+    f.billToEmail.value = deal?.contactEmail || '';
+    f.notes.value = invoiceSettings.notes || '';
+  }
+
+  invoiceItemsEditor.replaceChildren();
+  const items = invoice ? invoice.items
+    : deal ? [{ description: deal.deliverables || `Sponsorship: ${deal.brand}`, quantity: 1, unitPrice: deal.amount ?? '' }]
+      : [{}];
+  items.forEach((item) => addInvoiceItem(item));
+  renderInvoiceTotal();
+
+  document.getElementById('invoiceDialogTitle').textContent = invoice ? `Edit invoice ${invoice.number}` : deal ? `Invoice for ${deal.brand}` : 'Create invoice';
+  document.getElementById('deleteInvoice').hidden = !invoice;
+  invoiceDialog.showModal();
+}
+
+async function setInvoiceStatus(invoice, status) {
+  try {
+    await api(`/api/invoices/${invoice.id}`, { method: 'PUT', body: JSON.stringify({ statusOnly: true, status, paidOn: isoDay() }) });
+    loadDeals();
+  } catch (err) {
+    showBanner(err.message);
+  }
+}
+
+function invoiceRow(invoice) {
+  const [label, kind] = invoiceState(invoice);
+  const open = el('a', { class: 'button button-secondary', href: `/i/${invoice.id}`, target: '_blank', rel: 'noopener', text: 'View / PDF' });
+  const copy = el('button', { type: 'button', class: 'button-secondary', text: 'Copy link' });
+  copy.addEventListener('click', () => copyText(invoiceUrl(invoice), copy));
+  const edit = el('button', { type: 'button', class: 'button-link', text: 'Edit' });
+  edit.addEventListener('click', () => openInvoice(invoice));
+  const actions = [open, copy];
+  if (invoice.status === 'unpaid') {
+    const paid = el('button', { type: 'button', class: 'button-secondary', text: 'Mark paid' });
+    paid.addEventListener('click', () => setInvoiceStatus(invoice, 'paid'));
+    actions.push(paid);
+  } else {
+    const reopen = el('button', { type: 'button', class: 'button-link', text: 'Mark unpaid' });
+    reopen.addEventListener('click', () => setInvoiceStatus(invoice, 'unpaid'));
+    actions.push(reopen);
+  }
+  actions.push(edit);
+  const dates = [`Issued ${shortDate(invoice.issuedOn)}`];
+  if (invoice.status === 'paid' && invoice.paidOn) dates.push(`paid ${shortDate(invoice.paidOn)}`);
+  else if (invoice.dueOn && invoice.status === 'unpaid') dates.push(dueText('Payment', invoice.dueOn));
+  return el('div', { class: 'invoice-row' }, [
+    el('div', { class: 'invoice-row-main' }, [
+      el('div', { class: 'deal-title' }, [
+        el('strong', { text: `${invoice.number} · ${invoice.billTo.name}` }),
+        el('span', { class: 'deal-amount', text: formatMoney(invoice.total, invoice.currency) }),
+        el('span', { class: `deal-badge ${kind}`, text: label }),
+      ]),
+      el('p', { class: 'small muted', text: dates.join(' · ') }),
+    ]),
+    el('div', { class: 'kit-link-actions invoice-actions' }, actions),
+  ]);
+}
+
+function renderInvoices() {
+  if (!invoices.length) {
+    invoicesBody.replaceChildren(el('p', { class: 'small muted', text: 'No invoices yet. Use "Create invoice", or the Invoice button on a deal to fill it in from the deal.' }));
+    return;
+  }
+  invoicesBody.replaceChildren(el('div', { class: 'invoice-list' }, invoices.map(invoiceRow)));
+}
+
+async function loadInvoices() {
+  invoicesPanel.classList.toggle('locked', !state.limits.pro);
+  let data;
+  try {
+    data = await api('/api/invoices');
+  } catch (err) {
+    invoicesBody.replaceChildren(el('p', { class: 'small muted', text: err.message }));
+    return;
+  }
+  if (data.locked) {
+    invoicesBody.replaceChildren(el('div', { class: 'teaser' }, [
+      el('p', { text: 'Pro turns any deal into a professional invoice in one click: your details, the brand\'s, the deliverables and how to pay you. Download it as a PDF or send the brand a link.' }),
+      data.saved ? el('p', { class: 'small', text: `You have ${data.saved} saved invoice${data.saved === 1 ? '' : 's'}. Links you've already sent keep working.` }) : '',
+    ]));
+    return;
+  }
+  invoices = data.invoices;
+  invoiceSettings = data.settings || {};
+  nextInvoiceNumber = data.nextNumber;
+  renderInvoices();
+}
+
+document.getElementById('newInvoice').addEventListener('click', () => openInvoice(null));
+document.getElementById('closeInvoice').addEventListener('click', () => invoiceDialog.close());
+document.getElementById('addInvoiceItem').addEventListener('click', () => addInvoiceItem());
+invoiceForm.elements.taxRate.addEventListener('input', renderInvoiceTotal);
+invoiceForm.elements.currency.addEventListener('change', renderInvoiceTotal);
+
+const INVOICE_FIELDS = {
+  senderName: 'senderName', senderEmail: 'senderEmail', billToName: 'billToName', billToEmail: 'billToEmail',
+  number: 'number', issuedOn: 'issuedOn', dueOn: 'dueOn', taxRate: 'taxRate',
+};
+
+invoiceForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const f = invoiceForm.elements;
+  const body = {
+    dealId: invoiceDealId,
+    number: f.number.value.trim(),
+    issuedOn: f.issuedOn.value,
+    dueOn: f.dueOn.value,
+    currency: f.currency.value,
+    sender: {
+      name: f.senderName.value.trim(),
+      email: f.senderEmail.value.trim(),
+      address: f.senderAddress.value.trim(),
+      taxId: f.senderTaxId.value.trim(),
+      paymentDetails: f.paymentDetails.value.trim(),
+      notes: f.notes.value.trim(),
+    },
+    billTo: {
+      name: f.billToName.value.trim(),
+      contact: f.billToContact.value.trim(),
+      email: f.billToEmail.value.trim(),
+      address: f.billToAddress.value.trim(),
+    },
+    items: readInvoiceItems(),
+    taxRate: f.taxRate.value.trim(),
+    taxLabel: f.taxLabel.value.trim(),
+    notes: f.notes.value.trim(),
+  };
+  const button = document.getElementById('saveInvoice');
+  button.disabled = true;
+  invoiceForm.querySelectorAll('.invalid').forEach((input) => input.classList.remove('invalid'));
+  try {
+    const result = await api(editingInvoice ? `/api/invoices/${editingInvoice.id}` : '/api/invoices', {
+      method: editingInvoice ? 'PUT' : 'POST',
+      body: JSON.stringify(body),
+    });
+    invoiceDialog.close();
+    await loadDeals();
+    const saved = invoices.find((i) => i.id === (editingInvoice?.id || result.id));
+    if (saved && !editingInvoice) {
+      showBanner(`Invoice ${saved.number} created. Use "View / PDF" to download it, or "Copy link" to send it to ${saved.billTo.name}.`, 'success');
+      invoicesPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  } catch (err) {
+    invoiceError.textContent = err.message;
+    invoiceError.hidden = false;
+    const target = err.field === 'items' ? invoiceItemsEditor : f[INVOICE_FIELDS[err.field]];
+    if (target) {
+      target.classList.add('invalid');
+      target.scrollIntoView?.({ block: 'center' });
+    }
+  } finally {
+    button.disabled = false;
+  }
+});
+
+document.getElementById('deleteInvoice').addEventListener('click', async () => {
+  if (!editingInvoice || !confirm(`Delete invoice ${editingInvoice.number}? Its link will stop working. If you've already sent it, consider marking it void instead.`)) return;
+  try {
+    await api(`/api/invoices/${editingInvoice.id}`, { method: 'DELETE' });
+    invoiceDialog.close();
+    loadDeals();
+  } catch (err) {
+    invoiceError.textContent = err.message;
+    invoiceError.hidden = false;
   }
 });
 

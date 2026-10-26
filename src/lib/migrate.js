@@ -186,6 +186,31 @@ export const MIGRATIONS = [
   ]),
   // 8: Twitch box art matched to the games a creator lists
   ['ALTER TABLE users ADD COLUMN game_art TEXT'],
+  // 9: Pro invoices, and each creator's saved invoice details
+  [
+    `CREATE TABLE IF NOT EXISTS invoices (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      deal_id TEXT,
+      number TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'unpaid',
+      issued_on TEXT NOT NULL,
+      due_on TEXT,
+      paid_on TEXT,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      sender TEXT NOT NULL,
+      bill_to TEXT NOT NULL,
+      items TEXT NOT NULL,
+      tax_rate REAL,
+      tax_label TEXT,
+      notes TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS invoices_user ON invoices (user_id, created_at)',
+    'CREATE INDEX IF NOT EXISTS invoices_deal ON invoices (deal_id)',
+    'ALTER TABLE users ADD COLUMN invoice_settings TEXT',
+  ],
 ];
 
 let ready = null;

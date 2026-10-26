@@ -57,11 +57,11 @@ function saveConnection(env, userId, provider, account, stats) {
 }
 
 // Per-creator tables, besides users, connections and sessions
-export const USER_DATA_TABLES = ['kit_views', 'kit_sources', 'kit_countries', 'link_events', 'tracked_links', 'kit_versions', 'stat_snapshots', 'deals'];
+export const USER_DATA_TABLES = ['kit_views', 'kit_sources', 'kit_countries', 'link_events', 'tracked_links', 'kit_versions', 'stat_snapshots', 'deals', 'invoices'];
 
 // Profile fields copied from the merged-away profile when the kept one is empty
 const MERGE_FIELDS = [
-  'avatar_url', 'bio', 'games', 'game_art', 'contact_email', 'twitch_avg_viewers',
+  'avatar_url', 'bio', 'games', 'game_art', 'contact_email', 'twitch_avg_viewers', 'invoice_settings',
   'tiktok_handle', 'tiktok_followers', 'tiktok_avg_views', 'tiktok_engagement',
   ...SOCIAL_COLUMNS,
 ];
@@ -128,6 +128,7 @@ async function mergeUsers(env, aId, bId, provider, account, stats) {
   // Deals are the creator's own records, so they move over. Their tracked
   // links are deleted below, so deals stop pointing at them.
   statements.push(env.DB.prepare('UPDATE deals SET user_id = ?, link_id = NULL WHERE user_id = ?').bind(keep.id, drop.id));
+  statements.push(env.DB.prepare('UPDATE invoices SET user_id = ? WHERE user_id = ?').bind(keep.id, drop.id));
 
   // Analytics, links and versions on the merged-away profile go with it
   for (const table of USER_DATA_TABLES) {
