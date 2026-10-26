@@ -114,6 +114,7 @@ function dealFields(d) {
     linkId: d.link_id || '',
     linkLabel: d.link_label || '',
     invoice: d.invoice ? JSON.parse(d.invoice) : null,
+    proposal: d.proposal ? JSON.parse(d.proposal) : null,
     lastOpenedAt: d.last_opened_at || null,
     createdAt: d.created_at,
     updatedAt: d.updated_at,
@@ -130,7 +131,9 @@ export async function onRequestGet({ request, env }) {
   const { results } = await env.DB.prepare(`SELECT d.*, l.label AS link_label,
       (SELECT MAX(e.at) FROM link_events e WHERE e.user_id = d.user_id AND e.link_id = d.link_id) AS last_opened_at,
       (SELECT json_object('id', i.id, 'number', i.number, 'status', i.status, 'dueOn', i.due_on) FROM invoices i
-        WHERE i.deal_id = d.id AND i.user_id = d.user_id AND i.status != 'void' ORDER BY i.created_at DESC LIMIT 1) AS invoice
+        WHERE i.deal_id = d.id AND i.user_id = d.user_id AND i.status != 'void' ORDER BY i.created_at DESC LIMIT 1) AS invoice,
+      (SELECT json_object('id', p.id, 'status', p.status, 'lastViewedAt', p.last_viewed_at) FROM proposals p
+        WHERE p.deal_id = d.id AND p.user_id = d.user_id ORDER BY p.created_at DESC LIMIT 1) AS proposal
     FROM deals d LEFT JOIN tracked_links l ON l.id = d.link_id AND l.user_id = d.user_id
     WHERE d.user_id = ? ORDER BY d.updated_at DESC LIMIT ?`).bind(user.id, limits.deals).all();
   return json({ deals: results.map(dealFields), stages: STAGES, currencies: CURRENCIES });
@@ -184,6 +187,7 @@ export async function onRequestDelete({ request, env, params }) {
   // Invoices already sent stay, they just stop pointing at the deal
   await env.DB.batch([
     env.DB.prepare('UPDATE invoices SET deal_id = NULL WHERE deal_id = ? AND user_id = ?').bind(params.id, user.id),
+    env.DB.prepare('UPDATE proposals SET deal_id = NULL WHERE deal_id = ? AND user_id = ?').bind(params.id, user.id),
     env.DB.prepare('DELETE FROM deals WHERE id = ? AND user_id = ?').bind(params.id, user.id),
   ]);
   return json({ ok: true });

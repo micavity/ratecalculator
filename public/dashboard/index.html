@@ -178,6 +178,58 @@
         <div id="dealsBody"></div>
       </section>
 
+      <section class="panel pro-panel" id="proposalsPanel">
+        <div class="section-head">
+          <h2>Proposals <span class="plan-pill">Pro</span></h2>
+          <button type="button" id="newProposal">Create proposal</button>
+        </div>
+        <p class="small muted">Send a brand a proposal page with your stats, deliverables and price. They can accept it or ask for changes, and accepted proposals become Agreed deals.</p>
+        <div id="proposalsBody"></div>
+      </section>
+
+      <dialog class="deal-dialog invoice-dialog" id="proposalDialog" aria-labelledby="proposalDialogTitle">
+        <form id="proposalForm" novalidate>
+          <div class="section-head">
+            <h2 id="proposalDialogTitle">Create proposal</h2>
+            <button type="button" class="button-link" id="closeProposal" aria-label="Close">Close</button>
+          </div>
+          <p class="alert alert-error" id="proposalError" hidden></p>
+          <p class="alert alert-info" id="proposalChangeNote" hidden></p>
+          <div class="field-row">
+            <label>Brand <input type="text" name="brand" maxlength="80" required list="brandSuggestions"></label>
+            <label>Contact name <input type="text" name="contactName" maxlength="80"></label>
+            <label>Contact email <input type="email" name="contactEmail" maxlength="254"></label>
+          </div>
+          <label>Title <span class="opt">optional</span>
+            <input type="text" name="title" maxlength="100" placeholder="e.g. Launch campaign for the new headset">
+          </label>
+          <label>Personal note <span class="opt">optional</span>
+            <textarea name="message" rows="3" maxlength="1500" placeholder="e.g. Hi Sam! Thanks for the call. Here's what I'd suggest for the launch…"></textarea>
+          </label>
+          <fieldset class="group" data-field="items">
+            <legend>Deliverables and price</legend>
+            <div class="row-editor" id="proposalItems"></div>
+            <div class="actions">
+              <button type="button" class="button-secondary" id="addProposalItem">Add a line</button>
+              <select id="proposalFromRates" aria-label="Add from my rates" hidden></select>
+              <label class="inline-label">Currency <select name="currency"></select></label>
+            </div>
+            <p class="invoice-total-preview" id="proposalTotal"></p>
+          </fieldset>
+          <label>Timeline <span class="opt">optional</span>
+            <textarea name="timeline" rows="2" maxlength="500" placeholder="e.g. Script for your review by Nov 10, video live Nov 20"></textarea>
+          </label>
+          <label>What's included <span class="opt">optional</span>
+            <textarea name="includes" rows="3" maxlength="1000" placeholder="e.g. Posted on my channels and kept up. 1 round of script changes. Paid ad usage available for an extra fee."></textarea>
+          </label>
+          <label>Valid until <span class="opt">optional</span> <input type="date" name="validUntil"></label>
+          <div class="save-bar deal-actions">
+            <button type="submit" id="saveProposal">Save proposal</button>
+            <button type="button" class="button-link danger-link" id="deleteProposal" hidden>Delete proposal</button>
+          </div>
+        </form>
+      </dialog>
+
       <section class="panel pro-panel" id="invoicesPanel">
         <div class="section-head">
           <h2>Invoices <span class="plan-pill">Pro</span></h2>

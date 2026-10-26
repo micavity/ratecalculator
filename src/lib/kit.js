@@ -104,13 +104,13 @@ function audienceSection(audience) {
   </section>`;
 }
 
-function accentStyle(hex) {
+export function accentStyle(hex) {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
   return `--accent:${hex};--accent-soft:rgba(${r},${g},${b},0.15)`;
 }
 
 // The kit color: Essential creators can use extra colors or any custom color
-function kitColor(user, essential) {
+export function kitColor(user, essential) {
   if (essential && isHexColor(user.accent)) return user.accent;
   if (THEMES[user.theme]) return THEMES[user.theme];
   if (essential && ESSENTIAL_THEMES[user.theme]) return ESSENTIAL_THEMES[user.theme];

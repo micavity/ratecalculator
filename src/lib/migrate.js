@@ -211,6 +211,36 @@ export const MIGRATIONS = [
     'CREATE INDEX IF NOT EXISTS invoices_deal ON invoices (deal_id)',
     'ALTER TABLE users ADD COLUMN invoice_settings TEXT',
   ],
+  // 10: Pro proposals that brands can accept or ask to change
+  [
+    `CREATE TABLE IF NOT EXISTS proposals (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      deal_id TEXT,
+      status TEXT NOT NULL DEFAULT 'open',
+      title TEXT NOT NULL,
+      brand TEXT NOT NULL,
+      contact_name TEXT,
+      contact_email TEXT,
+      items TEXT NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      timeline TEXT,
+      includes TEXT,
+      message TEXT,
+      valid_until TEXT,
+      view_count INTEGER NOT NULL DEFAULT 0,
+      first_viewed_at INTEGER,
+      last_viewed_at INTEGER,
+      responder_name TEXT,
+      responder_email TEXT,
+      change_note TEXT,
+      responded_at INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS proposals_user ON proposals (user_id, created_at)',
+    'CREATE INDEX IF NOT EXISTS proposals_deal ON proposals (deal_id)',
+  ],
 ];
 
 let ready = null;

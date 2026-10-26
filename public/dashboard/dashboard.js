@@ -1441,6 +1441,10 @@ function dealBadges(d) {
     badges.push([dueText('Payment', d.paymentDue), daysUntil(d.paymentDue) < 0 ? 'deal-badge-warning' : '']);
   }
   if (d.stage === 'paid' && d.paidOn) badges.push([`Paid ${shortDate(d.paidOn)}`, 'deal-badge-good']);
+  if (d.proposal && ['pitched', 'negotiating', 'agreed'].includes(d.stage)) {
+    const [label, kind] = proposalState(d.proposal);
+    badges.push([`Proposal: ${label.toLowerCase()}`, kind]);
+  }
   if (d.invoice && d.stage !== 'paid') {
     const [label, kind] = invoiceState(d.invoice);
     badges.push([`Invoice ${d.invoice.number} · ${label.toLowerCase()}`, kind]);
@@ -1515,6 +1519,15 @@ function dealRow(d) {
   const edit = el('button', { type: 'button', class: 'button-link', text: 'Edit' });
   edit.addEventListener('click', () => openDeal(d));
   const side = [stage];
+  if (['pitched', 'negotiating'].includes(d.stage)) {
+    const proposal = d.proposal && proposals.find((p) => p.id === d.proposal.id);
+    const button = el('button', { type: 'button', class: 'button-secondary deal-invoice', text: proposal ? 'View proposal' : 'Proposal' });
+    button.addEventListener('click', () => {
+      if (proposal) window.open(`/p/${proposal.id}`, '_blank', 'noopener');
+      else openProposal(null, d);
+    });
+    side.push(button);
+  }
   if (['agreed', 'delivered', 'paid'].includes(d.stage) || d.invoice) {
     const invoice = d.invoice && invoices.find((i) => i.id === d.invoice.id);
     const button = el('button', { type: 'button', class: 'button-secondary deal-invoice', text: invoice ? 'View invoice' : 'Invoice' });
@@ -1589,12 +1602,13 @@ async function loadDeals() {
   if (data.locked) {
     renderDealsLocked(data.saved);
     loadInvoices();
+    loadProposals();
     setupPitches();
     return;
   }
   deals = data.deals;
   dealCurrencies = data.currencies;
-  await loadInvoices();
+  await Promise.all([loadInvoices(), loadProposals()]);
   renderDeals();
   renderBrandSuggestions();
   setupPitches();
@@ -1712,6 +1726,236 @@ document.getElementById('deleteDeal').addEventListener('click', async () => {
   } catch (err) {
     dealError.textContent = err.message;
     dealError.hidden = false;
+  }
+});
+
+// Proposals (Pro)
+
+const proposalsPanel = document.getElementById('proposalsPanel');
+const proposalsBody = document.getElementById('proposalsBody');
+const proposalDialog = document.getElementById('proposalDialog');
+const proposalForm = document.getElementById('proposalForm');
+const proposalError = document.getElementById('proposalError');
+const proposalItemsEditor = document.getElementById('proposalItems');
+const proposalFromRates = document.getElementById('proposalFromRates');
+let proposals = [];
+let editingProposal = null;
+let proposalDealId = '';
+
+function proposalState(p) {
+  if (p.status === 'accepted') return ['Accepted', 'deal-badge-good'];
+  if (p.status === 'changes') return ['Changes requested', 'deal-badge-warning'];
+  if (p.lastViewedAt) return [`Viewed ${relativeTime(p.lastViewedAt)}`, ''];
+  return ['Not opened yet', ''];
+}
+
+function addProposalItem(values = {}) {
+  const row = el('div', { class: 'row-item proposal-item' });
+  const description = el('input', { type: 'text', 'data-key': 'description', maxlength: '200', placeholder: 'e.g. 1 YouTube integration (60–90 sec)', 'aria-label': 'Deliverable' });
+  const price = el('input', { type: 'number', 'data-key': 'price', min: '0', step: '0.01', placeholder: '0', 'aria-label': 'Price' });
+  description.value = values.description || '';
+  price.value = values.price ?? '';
+  price.addEventListener('input', renderProposalTotal);
+  const remove = el('button', { type: 'button', class: 'button-link', text: 'Remove' });
+  remove.addEventListener('click', () => {
+    row.remove();
+    renderProposalTotal();
+  });
+  row.append(el('label', {}, [document.createTextNode('Deliverable'), description]), el('label', {}, [document.createTextNode('Price'), price]), remove);
+  proposalItemsEditor.append(row);
+}
+
+function readProposalItems() {
+  return [...proposalItemsEditor.querySelectorAll('.proposal-item')].map((row) => Object.fromEntries(
+    [...row.querySelectorAll('input[data-key]')].map((input) => [input.dataset.key, input.value.trim()]),
+  )).filter((i) => i.description || i.price);
+}
+
+function renderProposalTotal() {
+  const total = readProposalItems().reduce((sum, i) => sum + (Number(i.price) || 0), 0);
+  document.getElementById('proposalTotal').textContent = `Total: ${formatMoney(Math.round(total * 100) / 100, proposalForm.elements.currency.value || 'USD')}`;
+}
+
+// The creator's own rates and packages, to add as lines ("$150" becomes 150)
+function rateOptions() {
+  const price = (text) => {
+    const m = String(text).replace(/,/g, '').match(/\d+(\.\d+)?/);
+    return m ? Number(m[0]) : '';
+  };
+  const p = state.profile;
+  return [
+    ...(p.rateCard || []).map((r) => ({ description: r.name, price: price(r.price) })),
+    ...(p.packages || []).map((k) => ({ description: k.includes ? `${k.name} (${k.includes})` : k.name, price: price(k.price) })),
+  ].filter((o) => o.description);
+}
+
+function openProposal(proposal, deal = null) {
+  editingProposal = proposal;
+  const f = proposalForm.elements;
+  proposalForm.reset();
+  proposalForm.querySelectorAll('.invalid').forEach((input) => input.classList.remove('invalid'));
+  proposalError.hidden = true;
+  f.currency.replaceChildren(...dealCurrencies.map((c) => el('option', { value: c, text: c })));
+  const values = proposal || {
+    brand: deal?.brand || '',
+    contactName: deal?.contactName || '',
+    contactEmail: deal?.contactEmail || '',
+    currency: deal?.currency || 'USD',
+    items: deal ? [{ description: deal.deliverables || '', price: deal.amount ?? '' }] : [{}],
+  };
+  proposalDealId = proposal ? proposal.dealId : deal?.id || '';
+  for (const key of ['brand', 'contactName', 'contactEmail', 'title', 'message', 'timeline', 'includes', 'validUntil', 'currency']) {
+    if (values[key] !== undefined) f[key].value = values[key];
+  }
+  proposalItemsEditor.replaceChildren();
+  values.items.forEach((item) => addProposalItem(item));
+  renderProposalTotal();
+
+  const options = rateOptions();
+  proposalFromRates.hidden = !options.length;
+  proposalFromRates.replaceChildren(el('option', { value: '', text: 'Add from my rates…' }),
+    ...options.map((o, i) => el('option', { value: String(i), text: `${o.description}${o.price !== '' ? ` · ${o.price}` : ''}` })));
+
+  const note = document.getElementById('proposalChangeNote');
+  note.hidden = proposal?.status !== 'changes';
+  note.textContent = proposal?.status === 'changes'
+    ? `${proposal.brand} asked: “${proposal.changeNote}” Saving sends them the updated proposal at the same link.`
+    : '';
+  document.getElementById('proposalDialogTitle').textContent = proposal ? 'Edit proposal' : deal ? `Proposal for ${deal.brand}` : 'Create proposal';
+  document.getElementById('deleteProposal').hidden = !proposal;
+  proposalDialog.showModal();
+}
+
+proposalFromRates.addEventListener('change', () => {
+  const option = rateOptions()[Number(proposalFromRates.value)];
+  if (option) {
+    // Fill the first empty line, or add one
+    const empty = [...proposalItemsEditor.querySelectorAll('.proposal-item')].find((row) => !row.querySelector('[data-key="description"]').value);
+    if (empty) {
+      empty.querySelector('[data-key="description"]').value = option.description;
+      empty.querySelector('[data-key="price"]').value = option.price;
+    } else {
+      addProposalItem(option);
+    }
+    renderProposalTotal();
+  }
+  proposalFromRates.value = '';
+});
+
+function proposalRow(p) {
+  const [label, kind] = proposalState(p);
+  const url = `${location.origin}/p/${p.id}`;
+  const view = el('a', { class: 'button button-secondary', href: `/p/${p.id}`, target: '_blank', rel: 'noopener', text: 'View' });
+  const copy = el('button', { type: 'button', class: 'button-secondary', text: 'Copy link' });
+  copy.addEventListener('click', () => copyText(url, copy));
+  const actions = [view, copy];
+  if (p.status === 'accepted') {
+    const deal = deals.find((d) => d.id === p.dealId);
+    if (deal && !deal.invoice) {
+      const invoice = el('button', { type: 'button', class: 'button-secondary', text: 'Create invoice' });
+      invoice.addEventListener('click', () => openInvoice(null, deal));
+      actions.push(invoice);
+    }
+  } else {
+    const edit = el('button', { type: 'button', class: p.status === 'changes' ? 'button-secondary' : 'button-link', text: p.status === 'changes' ? 'Update proposal' : 'Edit' });
+    edit.addEventListener('click', () => openProposal(p));
+    actions.push(edit);
+  }
+  if (p.status === 'accepted') {
+    const remove = el('button', { type: 'button', class: 'button-link', text: 'Delete' });
+    remove.addEventListener('click', async () => {
+      if (!confirm(`Delete the accepted proposal for ${p.brand}? Its link will stop working. The deal stays.`)) return;
+      await api(`/api/proposals/${p.id}`, { method: 'DELETE' }).catch((err) => showBanner(err.message));
+      loadDeals();
+    });
+    actions.push(remove);
+  }
+  const details = [`${p.viewCount} view${p.viewCount === 1 ? '' : 's'}`];
+  if (p.status === 'accepted' && p.responderName) details.push(`accepted by ${p.responderName}${p.responderEmail ? ` (${p.responderEmail})` : ''} ${relativeTime(p.respondedAt)}`);
+  return el('div', { class: 'invoice-row' }, [
+    el('div', { class: 'invoice-row-main' }, [
+      el('div', { class: 'deal-title' }, [
+        el('strong', { text: `${p.brand}: ${p.title}` }),
+        el('span', { class: 'deal-amount', text: formatMoney(p.total, p.currency) }),
+        el('span', { class: `deal-badge ${kind}`, text: label }),
+      ]),
+      el('p', { class: 'small muted', text: details.join(' · ') }),
+      p.status === 'changes' ? el('p', { class: 'small', text: `“${p.changeNote}”${p.responderName ? `: ${p.responderName}` : ''}` }) : '',
+    ]),
+    el('div', { class: 'kit-link-actions invoice-actions' }, actions),
+  ]);
+}
+
+function renderProposals() {
+  proposalsBody.replaceChildren(proposals.length
+    ? el('div', { class: 'invoice-list' }, proposals.map(proposalRow))
+    : el('p', { class: 'small muted', text: 'No proposals yet. Use "Create proposal", or the Proposal button on a deal you\'re pitching or negotiating.' }));
+}
+
+async function loadProposals() {
+  proposalsPanel.classList.toggle('locked', !state.limits.pro);
+  let data;
+  try {
+    data = await api('/api/proposals');
+  } catch (err) {
+    proposalsBody.replaceChildren(el('p', { class: 'small muted', text: err.message }));
+    return;
+  }
+  if (data.locked) {
+    proposalsBody.replaceChildren(el('div', { class: 'teaser' }, [
+      el('p', { text: 'Pro lets you send brands a proposal page with your stats, deliverables and price. They click Accept, and the deal is marked Agreed and ready to invoice.' }),
+      data.saved ? el('p', { class: 'small', text: `You have ${data.saved} saved proposal${data.saved === 1 ? '' : 's'}. Links you've already sent keep working.` }) : '',
+    ]));
+    return;
+  }
+  proposals = data.proposals;
+  renderProposals();
+}
+
+document.getElementById('newProposal').addEventListener('click', () => openProposal(null));
+document.getElementById('closeProposal').addEventListener('click', () => proposalDialog.close());
+document.getElementById('addProposalItem').addEventListener('click', () => addProposalItem());
+proposalForm.elements.currency.addEventListener('change', renderProposalTotal);
+
+proposalForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const f = proposalForm.elements;
+  const body = { dealId: proposalDealId, items: readProposalItems() };
+  for (const key of ['brand', 'contactName', 'contactEmail', 'title', 'message', 'timeline', 'includes', 'validUntil', 'currency']) body[key] = f[key].value.trim();
+  const button = document.getElementById('saveProposal');
+  button.disabled = true;
+  proposalForm.querySelectorAll('.invalid').forEach((input) => input.classList.remove('invalid'));
+  try {
+    const result = await api(editingProposal ? `/api/proposals/${editingProposal.id}` : '/api/proposals', {
+      method: editingProposal ? 'PUT' : 'POST',
+      body: JSON.stringify(body),
+    });
+    proposalDialog.close();
+    await loadDeals();
+    const id = editingProposal?.id || result.id;
+    const copy = el('button', { type: 'button', class: 'button-secondary', text: 'Copy link' });
+    copy.addEventListener('click', () => copyText(`${location.origin}/p/${id}`, copy));
+    showBanner(editingProposal ? 'Proposal updated. The brand will see the new version at the same link.' : `Proposal saved. Send ${body.brand} the link: `, 'success');
+    if (!editingProposal) banner.append(copy);
+  } catch (err) {
+    proposalError.textContent = err.message;
+    proposalError.hidden = false;
+    const target = err.field === 'items' ? proposalItemsEditor : f[err.field];
+    if (target) target.classList.add('invalid');
+  } finally {
+    button.disabled = false;
+  }
+});
+
+document.getElementById('deleteProposal').addEventListener('click', async () => {
+  if (!editingProposal || !confirm(`Delete this proposal for ${editingProposal.brand}? Its link will stop working.`)) return;
+  try {
+    await api(`/api/proposals/${editingProposal.id}`, { method: 'DELETE' });
+    proposalDialog.close();
+    loadDeals();
+  } catch (err) {
+    proposalError.textContent = err.message;
+    proposalError.hidden = false;
   }
 });
 

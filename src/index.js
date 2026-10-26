@@ -21,6 +21,7 @@ import * as deals from './routes/deals.js';
 import * as plans from './routes/plans.js';
 import * as games from './routes/games.js';
 import * as invoices from './routes/invoices.js';
+import * as proposals from './routes/proposals.js';
 import { ensureSchema } from './lib/migrate.js';
 import { refreshStaleUsers } from './lib/users.js';
 import { pruneOldEvents } from './lib/analytics.js';
@@ -54,6 +55,12 @@ const ROUTES = [
   ['PUT', '/api/invoices/:id', invoices.onRequestPut],
   ['DELETE', '/api/invoices/:id', invoices.onRequestDelete],
   ['PUT', '/api/invoice-settings', invoices.settingsPut],
+  ['GET', '/api/proposals', proposals.onRequestGet],
+  ['POST', '/api/proposals', proposals.onRequestPost],
+  ['PUT', '/api/proposals/:id', proposals.onRequestPut],
+  ['DELETE', '/api/proposals/:id', proposals.onRequestDelete],
+  ['POST', '/p/:id/accept', proposals.accept],
+  ['POST', '/p/:id/changes', proposals.requestChanges],
   ['POST', '/api/stripe/webhook', billing.webhook],
   ['GET', '/api/referrals', referrals.onRequestGet],
   ['PUT', '/api/referrals', referrals.onRequestPut],
@@ -71,6 +78,7 @@ const ROUTES = [
   ['POST', '/api/admin/payouts/:id/paid', admin.markPaid],
   ['GET', '/admin', admin.page],
   ['GET', '/i/:id', invoices.page],
+  ['GET', '/p/:id', proposals.page],
   ['GET', '/:slug', kit.onRequestGet],
   ['GET', '/:slug/:version', kit.onRequestGet],
 ];
