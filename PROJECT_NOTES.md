@@ -61,6 +61,7 @@ Free media kits and sponsorship rate estimates for creators. Built for gaming cr
 - Sign-in is Twitch or YouTube only (proves channel ownership). TikTok, Instagram, Facebook and X stats are typed in and shown as "self-reported" (platform list in `src/lib/socials.js`).
 - Twitch doesn't share average viewers, so creators enter it (self-reported). Twitch followers and all YouTube stats are verified.
 - Rate estimates are industry rules of thumb, adjusted by region, engagement and niche (gaming plus 15 other niches, multipliers in `public/rates.js`). They're labeled as estimates everywhere.
+- YouTube engagement is the average of each recent video's own rate ((likes + comments) ÷ views), not all interactions ÷ all views, so one big video with a lower rate doesn't drag it down.
 - Kit views ignore bots, link previews and the creator's own visits. We store the referring site and country, never IP addresses.
 - Stats refresh daily and on a 6-hour schedule for stale accounts, because YouTube's rules don't allow keeping its data more than 30 days without refreshing.
 

@@ -75,17 +75,16 @@ export function parseDuration(iso) {
   return d * 86400 + h * 3600 + min * 60 + s;
 }
 
+// Engagement is the average of each video's own rate ((likes + comments) ÷ views),
+// so one big video with a lower rate doesn't drag the whole number down
 function summarize(videos) {
   if (!videos.length) return { avg: null, engagement: null };
-  let views = 0;
-  let interactions = 0;
-  for (const v of videos) {
-    views += v.views;
-    interactions += v.likes + v.comments;
-  }
+  const views = videos.reduce((sum, v) => sum + v.views, 0);
+  const rates = videos.filter((v) => v.views > 0).map((v) => (v.likes + v.comments) / v.views);
+  const engagement = rates.length ? rates.reduce((sum, r) => sum + r, 0) / rates.length : null;
   return {
     avg: Math.round(views / videos.length),
-    engagement: views ? Math.round((interactions / views) * 1000) / 10 : null,
+    engagement: engagement === null ? null : Math.round(engagement * 1000) / 10,
   };
 }
 
