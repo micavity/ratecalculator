@@ -1,6 +1,7 @@
 import { REGION_MULTIPLIER, FOCUS_MULTIPLIER } from '../../public/rates.js';
 import { twitchAppToken, getTwitchStats, twitchConfigured } from './twitch.js';
 import { getYouTubeStats, youtubeConfigured } from './youtube.js';
+import { THEMES, parseFeatured, parseBrands, parseAudience, brandsToText, parseJson } from './kit-content.js';
 
 // Paths that can't be used as media kit links
 export const RESERVED_SLUGS = new Set([
@@ -206,6 +207,10 @@ export function profileFields(user) {
     tiktokFollowers: user.tiktok_followers,
     tiktokAvgViews: user.tiktok_avg_views,
     tiktokEngagement: user.tiktok_engagement,
+    featured: parseJson(user.featured, []).map((v) => v.url),
+    brands: brandsToText(parseJson(user.brands, [])),
+    audience: parseJson(user.audience, {}),
+    theme: user.theme,
   };
 }
 
@@ -268,6 +273,20 @@ export function validateProfile(body) {
     return fail('tiktokHandle', 'Enter a valid TikTok username.');
   }
 
+  const featured = parseFeatured(body.featured);
+  if (featured.error) return fail('featured', featured.error);
+  values.featured = JSON.stringify(featured.value);
+
+  const brands = parseBrands(body.brands);
+  if (brands.error) return fail('brands', brands.error);
+  values.brands = JSON.stringify(brands.value);
+
+  const audience = parseAudience(body.audience);
+  if (audience.error) return fail('audience', audience.error);
+  values.audience = JSON.stringify(audience.value);
+
+  values.theme = body.theme in THEMES ? body.theme : 'purple';
+
   return { values };
 }
 
@@ -298,4 +317,29 @@ export function rateInput(user, connections) {
     ttViews: user.tiktok_avg_views,
     ttEngagement: user.tiktok_engagement,
   };
+}
+
+const BOT_PATTERN = /bot|crawl|spider|preview|discord|slack|facebookexternalhit|twitter|whatsapp|telegram|embed|curl|wget|python/i;
+
+// Counts a media kit view, skipping bots, link previews and the creator themselves
+export async function recordView(env, request, ownerId, viewer) {
+  if (viewer?.id === ownerId) return;
+  if (BOT_PATTERN.test(request.headers.get('user-agent') || '')) return;
+  const day = new Date().toISOString().slice(0, 10);
+  await env.DB.prepare(
+    `INSERT INTO kit_views (user_id, day, views) VALUES (?, ?, 1)
+     ON CONFLICT (user_id, day) DO UPDATE SET views = views + 1`,
+  ).bind(ownerId, day).run();
+}
+
+export async function getViewStats(env, userId) {
+  const since = (days) => new Date(Date.now() - (days - 1) * 86400000).toISOString().slice(0, 10);
+  const row = await env.DB.prepare(
+    `SELECT
+       COALESCE(SUM(CASE WHEN day >= ? THEN views END), 0) AS last7,
+       COALESCE(SUM(CASE WHEN day >= ? THEN views END), 0) AS last30,
+       COALESCE(SUM(views), 0) AS total
+     FROM kit_views WHERE user_id = ?`,
+  ).bind(since(7), since(30), userId).first();
+  return { last7: row.last7, last30: row.last30, total: row.total };
 }

@@ -15,7 +15,10 @@
   <header class="site-header">
     <div class="wrap header-inner">
       <a class="brand" href="/" aria-label="CreatorGG home">Creator<span class="gg">GG</span></a>
-      <a class="header-link" href="/login">Get your media kit</a>
+      <nav class="site-nav" id="site-nav" aria-label="Main">
+        <a href="/">Rate calculator</a>
+        <a class="nav-cta" href="/login/">Get your media kit</a>
+      </nav>
     </div>
   </header>
 
@@ -119,9 +122,14 @@
   </main>
 
   <footer class="site-footer">
-    <div class="wrap">© <span id="year"></span> CreatorGG. Estimates only. Not affiliated with Twitch, YouTube or TikTok.</div>
+    <div class="wrap footer-inner">
+      <span>© <span class="year"></span> CreatorGG</span>
+      <nav aria-label="Footer"><a href="/">Rate calculator</a><a href="/login/">Get your media kit</a></nav>
+    </div>
   </footer>
 
   <script type="module" src="/app.js"></script>
+  <script src="/nav.js" defer></script>
+  <script>document.querySelectorAll(".year").forEach((el) => { el.textContent = new Date().getFullYear(); });</script>
 </body>
 </html>

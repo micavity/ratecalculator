@@ -10,34 +10,89 @@
 <body>
   <header class="site-header">
     <div class="wrap header-inner">
-      <a class="brand" href="/">Creator<span class="gg">GG</span></a>
-      <button type="button" class="button-link" id="logout">Log out</button>
+      <a class="brand" href="/" aria-label="CreatorGG home">Creator<span class="gg">GG</span></a>
+      <nav class="site-nav" id="site-nav" aria-label="Main">
+        <a href="/">Rate calculator</a>
+        <a class="nav-cta" href="/login/">Get your media kit</a>
+      </nav>
     </div>
   </header>
 
   <main class="wrap dashboard" id="app" hidden>
     <p class="alert" id="banner" hidden></p>
 
-    <section class="panel kit-link">
-      <div>
-        <h1>Your media kit</h1>
-        <p class="kit-url"><span id="kitUrl"></span></p>
-      </div>
-      <div class="kit-link-actions">
-        <button type="button" id="copyLink">Copy link</button>
-        <a class="button button-secondary" id="viewKit" target="_blank" rel="noopener">View</a>
-      </div>
-    </section>
+    <div class="tabs" role="tablist">
+      <button type="button" role="tab" class="tab" id="tab-overview" aria-controls="panel-overview" aria-selected="true">Overview</button>
+      <button type="button" role="tab" class="tab" id="tab-edit" aria-controls="profile" aria-selected="false">Edit kit</button>
+    </div>
 
-    <section class="panel">
-      <div class="section-head">
-        <h2>Linked accounts</h2>
-        <button type="button" class="button-secondary" id="refresh">Refresh stats</button>
-      </div>
-      <div id="connections"></div>
-    </section>
+    <!-- Overview -->
+    <div id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" class="tab-panel">
+      <section class="panel kit-link">
+        <div>
+          <h1>Your media kit</h1>
+          <p class="kit-url"><span id="kitUrl"></span></p>
+        </div>
+        <div class="kit-link-actions">
+          <button type="button" id="copyLink">Copy link</button>
+          <a class="button button-secondary" id="viewKit" target="_blank" rel="noopener">View</a>
+        </div>
+      </section>
 
-    <form id="profile" class="panel" novalidate>
+      <section class="panel">
+        <h2>Kit views</h2>
+        <div class="view-stats">
+          <div class="stat"><span class="stat-value" id="views7">0</span><span class="stat-label">Last 7 days</span></div>
+          <div class="stat"><span class="stat-value" id="views30">0</span><span class="stat-label">Last 30 days</span></div>
+          <div class="stat"><span class="stat-value" id="viewsTotal">0</span><span class="stat-label">All time</span></div>
+        </div>
+        <p class="small muted">Your own visits and link previews don't count.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Share your kit</h2>
+        <div class="share-grid">
+          <div class="share-item">
+            <h3>PDF</h3>
+            <p class="small muted">Attach your kit to emails to brands. Opens your kit's print screen; choose "Save as PDF".</p>
+            <a class="button button-secondary" id="pdfLink" target="_blank" rel="noopener">Download PDF</a>
+          </div>
+          <div class="share-item">
+            <h3>Share image</h3>
+            <p class="small muted">A card with your top stats for X, Discord or Instagram.</p>
+            <canvas id="shareCanvas" width="1200" height="630" class="share-preview"></canvas>
+            <button type="button" class="button-secondary" id="downloadImage">Download image</button>
+          </div>
+          <div class="share-item">
+            <h3>QR code</h3>
+            <p class="small muted">For stream overlays, merch or business cards.</p>
+            <img id="qrImage" class="qr" alt="QR code for your media kit">
+            <button type="button" class="button-secondary" id="downloadQr">Download QR code</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>My rates</h2>
+        <p class="small muted">Estimated from your current stats. Change your stats on the Edit kit tab.</p>
+        <div id="myRates"></div>
+        <div class="actions" id="ratesActions" hidden>
+          <button type="button" id="copyRates">Copy my rates</button>
+          <span id="ratesCopied" class="copied" hidden>Copied!</span>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-head">
+          <h2>Linked accounts</h2>
+          <button type="button" class="button-secondary" id="refresh">Refresh stats</button>
+        </div>
+        <div id="connections"></div>
+      </section>
+    </div>
+
+    <!-- Edit kit -->
+    <form id="profile" class="panel tab-panel" role="tabpanel" aria-labelledby="tab-edit" novalidate hidden>
       <h2>Profile</h2>
       <label>Display name
         <input type="text" name="displayName" maxlength="60" required>
@@ -58,6 +113,61 @@
         <input type="email" name="contactEmail" maxlength="254" placeholder="you@example.com">
         <small>Shown as a "Work with me" button so brands can reach you.</small>
       </label>
+
+      <h2>Kit color</h2>
+      <div class="theme-picker" role="radiogroup" aria-label="Kit color">
+        <label class="swatch" style="--swatch:#8b5cf6"><input type="radio" name="theme" value="purple"><span>Purple</span></label>
+        <label class="swatch" style="--swatch:#3b82f6"><input type="radio" name="theme" value="blue"><span>Blue</span></label>
+        <label class="swatch" style="--swatch:#10b981"><input type="radio" name="theme" value="green"><span>Green</span></label>
+        <label class="swatch" style="--swatch:#f97316"><input type="radio" name="theme" value="orange"><span>Orange</span></label>
+        <label class="swatch" style="--swatch:#ec4899"><input type="radio" name="theme" value="pink"><span>Pink</span></label>
+      </div>
+
+      <h2>Featured content</h2>
+      <p class="muted small">Up to 3 YouTube videos, Twitch clips or Twitch VODs. They play right on your kit.</p>
+      <label>Video 1 <input type="url" name="featured" placeholder="https://youtube.com/watch?v=… or https://clips.twitch.tv/…"></label>
+      <label>Video 2 <input type="url" name="featured"></label>
+      <label>Video 3 <input type="url" name="featured"></label>
+
+      <h2>Brands I've worked with</h2>
+      <label>One brand per line
+        <textarea name="brands" rows="4" placeholder="Razer, https://razer.com&#10;HyperX&#10;Night Shift (indie game)"></textarea>
+        <small>Add a link after a comma if you like. Up to 12.</small>
+      </label>
+
+      <h2>Audience</h2>
+      <p class="muted small">From your Twitch, YouTube or TikTok analytics. Leave blank anything you don't know. Shown as "self-reported."</p>
+      <fieldset class="group" data-field="audience">
+        <legend>Age (%)</legend>
+        <div class="field-row">
+          <label>13–17 <input type="number" min="0" max="100" data-audience="ages.13-17"></label>
+          <label>18–24 <input type="number" min="0" max="100" data-audience="ages.18-24"></label>
+          <label>25–34 <input type="number" min="0" max="100" data-audience="ages.25-34"></label>
+          <label>35+ <input type="number" min="0" max="100" data-audience="ages.35+"></label>
+        </div>
+      </fieldset>
+      <fieldset class="group">
+        <legend>Gender (%)</legend>
+        <div class="field-row">
+          <label>Male <input type="number" min="0" max="100" data-audience="gender.male"></label>
+          <label>Female <input type="number" min="0" max="100" data-audience="gender.female"></label>
+        </div>
+      </fieldset>
+      <fieldset class="group">
+        <legend>Top countries</legend>
+        <div class="field-row country-row">
+          <label>Country <input type="text" maxlength="40" data-audience="countries.0.name" placeholder="United States"></label>
+          <label>% <input type="number" min="0" max="100" data-audience="countries.0.percent"></label>
+        </div>
+        <div class="field-row country-row">
+          <label>Country <input type="text" maxlength="40" data-audience="countries.1.name"></label>
+          <label>% <input type="number" min="0" max="100" data-audience="countries.1.percent"></label>
+        </div>
+        <div class="field-row country-row">
+          <label>Country <input type="text" maxlength="40" data-audience="countries.2.name"></label>
+          <label>% <input type="number" min="0" max="100" data-audience="countries.2.percent"></label>
+        </div>
+      </fieldset>
 
       <h2>Stats you enter</h2>
       <p class="muted small">Twitch doesn't share average viewers and TikTok doesn't share stats with apps like ours, so add these yourself. They're marked "self-reported" on your kit.</p>
@@ -115,6 +225,8 @@
     </form>
   </main>
 
+  <script src="/nav.js" defer></script>
+  <script src="/vendor/qrcode.js"></script>
   <script type="module" src="/dashboard/dashboard.js"></script>
 </body>
 </html>

@@ -16,14 +16,13 @@ Runs entirely on Cloudflare: a Worker with static assets, plus D1 for the databa
   - `auth-start.js`, `auth-callback.js`: Twitch and YouTube sign-in
   - the rest: dashboard API
 - `src/lib/`: shared backend code
-- `schema.sql`: database tables
+- `src/lib/migrate.js`: database tables. New migrations run automatically on the first request after a deploy.
 
 ## Setup
 
 ### 1. Database
 Cloudflare → **Storage & Databases → D1** → create a database named `creatorgg`.
-Open its **Console**, paste in `schema.sql` and run it.
-Put the database ID in `wrangler.toml`.
+Put the database ID in `wrangler.toml`. Tables are created automatically.
 
 ### 2. Twitch sign-in
 [dev.twitch.tv/console](https://dev.twitch.tv/console) → **Register Your Application**
@@ -53,7 +52,6 @@ Redeploy after adding them. Check `/api/status` to confirm the site can see them
 ## Local development
 
 ```sh
-npx wrangler d1 execute DB --local --file=schema.sql
 npx wrangler dev
 ```
 

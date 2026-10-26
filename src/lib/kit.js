@@ -1,6 +1,7 @@
 import { escapeHtml as e } from './http.js';
 import { estimateRates, formatRange } from '../../public/rates.js';
 import { rateInput } from './users.js';
+import { THEMES, AGE_GROUPS, hasAudience, parseJson } from './kit-content.js';
 
 const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
 const dateFormat = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -26,7 +27,94 @@ function platformCard(name, link, verified, stats) {
   </section>`;
 }
 
-export function renderKit(user, connections, origin) {
+function embedUrl(video, host) {
+  if (video.type === 'youtube') return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.id)}`;
+  if (video.type === 'twitch-clip') return `https://clips.twitch.tv/embed?clip=${encodeURIComponent(video.id)}&parent=${encodeURIComponent(host)}&autoplay=false`;
+  return `https://player.twitch.tv/?video=${encodeURIComponent(video.id)}&parent=${encodeURIComponent(host)}&autoplay=false`;
+}
+
+function featuredSection(featured, host) {
+  if (!featured.length) return '';
+  const embeds = featured.map((v) => `<div class="embed"><iframe src="${e(embedUrl(v, host))}" title="Featured video" loading="lazy" allowfullscreen allow="encrypted-media; picture-in-picture"></iframe></div>`).join('');
+  const links = featured.map((v) => `<li><a href="${e(v.url)}">${e(v.url)}</a></li>`).join('');
+  return `<section class="kit-card kit-section">
+    <header><h2>Featured content</h2></header>
+    <div class="embeds no-print">${embeds}</div>
+    <ul class="print-only">${links}</ul>
+  </section>`;
+}
+
+function brandsSection(brands) {
+  if (!brands.length) return '';
+  const items = brands.map((b) => (b.url
+    ? `<li><a href="${e(b.url)}" target="_blank" rel="noopener nofollow">${e(b.name)}</a></li>`
+    : `<li>${e(b.name)}</li>`)).join('');
+  return `<section class="kit-card kit-section">
+    <header><h2>Brands I've worked with</h2></header>
+    <ul class="brand-list">${items}</ul>
+  </section>`;
+}
+
+function bars(rows) {
+  return rows.map(([label, value]) => `<div class="bar-row">
+    <span class="bar-label">${e(label)}</span>
+    <span class="bar"><span style="width:${Math.min(100, Math.max(0, Number(value) || 0))}%"></span></span>
+    <span class="bar-value">${value === null ? '' : `${e(value)}%`}</span>
+  </div>`).join('');
+}
+
+function audienceSection(audience) {
+  if (!hasAudience(audience)) return '';
+  const groups = [];
+  const ages = AGE_GROUPS.filter((g) => audience.ages?.[g] != null).map((g) => [g, audience.ages[g]]);
+  if (ages.length) groups.push(`<div><h3>Age</h3>${bars(ages)}</div>`);
+  const gender = [['Male', audience.gender?.male], ['Female', audience.gender?.female]].filter(([, v]) => v != null);
+  if (gender.length) groups.push(`<div><h3>Gender</h3>${bars(gender)}</div>`);
+  if (audience.countries?.length) {
+    groups.push(`<div><h3>Top countries</h3>${bars(audience.countries.map((c) => [c.name, c.percent]))}</div>`);
+  }
+  return `<section class="kit-card kit-section">
+    <header><h2>Audience</h2><span class="stat-note">Self-reported</span></header>
+    <div class="audience-grid">${groups.join('')}</div>
+  </section>`;
+}
+
+function themeStyle(theme) {
+  const hex = THEMES[theme] || THEMES.purple;
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  return `--accent:${hex};--accent-soft:rgba(${r},${g},${b},0.15)`;
+}
+
+export function siteHeader(viewer) {
+  const links = viewer
+    ? `<a href="/">Rate calculator</a><a href="/dashboard/">Dashboard</a><a href="/${e(viewer.slug)}">My kit</a>`
+    : '<a href="/">Rate calculator</a><a class="nav-cta" href="/login/">Get your media kit</a>';
+  return `<header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="/">Creator<span class="gg">GG</span></a>
+      <nav class="site-nav" aria-label="Main">${links}</nav>
+    </div>
+  </header>`;
+}
+
+function page({ title, head = '', bodyStyle = '', body }) {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${e(title)}</title>
+  ${head}
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body${bodyStyle ? ` style="${bodyStyle}"` : ''}>
+${body}
+</body>
+</html>`;
+}
+
+export function renderKit(user, connections, { origin, host, viewer, print }) {
   const twitch = connections.twitch;
   const youtube = connections.youtube;
   const tiktokUrl = user.tiktok_handle ? `https://www.tiktok.com/@${encodeURIComponent(user.tiktok_handle)}` : null;
@@ -50,7 +138,7 @@ export function renderKit(user, connections, origin) {
     ]),
   ].join('');
 
-  const audience = (twitch?.stats.followers || 0) + (yt.subscribers || 0) + (user.tiktok_followers || 0);
+  const audienceTotal = (twitch?.stats.followers || 0) + (yt.subscribers || 0) + (user.tiktok_followers || 0);
 
   let rates = '';
   if (user.show_rates) {
@@ -58,7 +146,7 @@ export function renderKit(user, connections, origin) {
     if (sections.length) {
       const rows = sections.map((s) => `<h3>${e(s.name)}</h3>${s.rates.map(([label, range]) => `<div class="rate"><span>${e(label)}</span><span class="amount">${e(formatRange(range))}</span></div>`).join('')}`).join('');
       const bundleRow = bundle ? `<h3>Bundle</h3><div class="rate bundle"><span>One of each platform's main deal</span><span class="amount">${e(formatRange(bundle))}</span></div>` : '';
-      rates = `<section class="kit-card"><header><h2>Sponsorship rates</h2></header>${rows}${bundleRow}<p class="note">Starting rates. Custom packages available.</p></section>`;
+      rates = `<section class="kit-card kit-section"><header><h2>Sponsorship rates</h2></header>${rows}${bundleRow}<p class="note">Starting rates. Custom packages available.</p></section>`;
     }
   }
 
@@ -74,34 +162,27 @@ export function renderKit(user, connections, origin) {
   const avatar = user.avatar_url
     ? `<img class="avatar" src="${e(user.avatar_url)}" alt="" width="96" height="96">`
     : `<div class="avatar avatar-fallback" aria-hidden="true">${e(user.display_name.charAt(0).toUpperCase())}</div>`;
-  const contact = user.contact_email
-    ? `<a class="button" href="mailto:${e(user.contact_email)}?subject=${encodeURIComponent(`Sponsorship inquiry for ${user.display_name}`)}">Work with me</a>`
-    : '';
-  const description = user.bio || `${user.display_name}'s media kit: audience stats and sponsorship rates.`;
   const pageUrl = `${origin}/${user.slug}`;
+  const contact = user.contact_email
+    ? `<a class="button no-print" href="mailto:${e(user.contact_email)}?subject=${encodeURIComponent(`Sponsorship inquiry for ${user.display_name}`)}">Work with me</a>
+       <p class="print-only">Contact: ${e(user.contact_email)} · ${e(pageUrl)}</p>`
+    : `<p class="print-only">${e(pageUrl)}</p>`;
+  const description = user.bio || `${user.display_name}'s media kit: audience stats and sponsorship rates.`;
+  const ownerBar = viewer?.id === user.id
+    ? '<p class="owner-bar no-print">This is your media kit. <a href="/dashboard/">Edit it on your dashboard →</a></p>'
+    : '';
 
-  return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${e(user.display_name)} · Media Kit · CreatorGG</title>
-  <meta name="description" content="${e(description.slice(0, 160))}">
+  return page({
+    title: `${user.display_name} · Media Kit · CreatorGG`,
+    bodyStyle: themeStyle(user.theme),
+    head: `<meta name="description" content="${e(description.slice(0, 160))}">
   <meta property="og:title" content="${e(user.display_name)} · Media Kit">
   <meta property="og:description" content="${e(description.slice(0, 200))}">
   <meta property="og:url" content="${e(pageUrl)}">
-  ${user.avatar_url ? `<meta property="og:image" content="${e(user.avatar_url)}">` : ''}
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/styles.css">
-</head>
-<body>
-  <header class="site-header">
-    <div class="wrap header-inner">
-      <a class="brand" href="/">Creator<span class="gg">GG</span></a>
-      <span class="header-note">Media kit</span>
-    </div>
-  </header>
+  ${user.avatar_url ? `<meta property="og:image" content="${e(user.avatar_url)}">` : ''}`,
+    body: `${siteHeader(viewer)}
   <main class="wrap kit">
+    ${ownerBar}
     <section class="kit-hero">
       ${avatar}
       <div class="kit-intro">
@@ -111,37 +192,31 @@ export function renderKit(user, connections, origin) {
         ${contact}
       </div>
     </section>
-    ${audience ? `<p class="audience"><strong>${e(count(audience))}</strong> total followers across platforms</p>` : ''}
+    ${audienceTotal ? `<p class="audience"><strong>${e(count(audienceTotal))}</strong> total followers across platforms</p>` : ''}
     <div class="kit-grid">${cards || '<p class="empty">No stats yet.</p>'}</div>
+    ${audienceSection(parseJson(user.audience, {}))}
+    ${featuredSection(parseJson(user.featured, []), host)}
+    ${brandsSection(parseJson(user.brands, []))}
     ${rates}
     ${updated ? `<p class="updated">Verified stats updated ${e(dateFormat.format(updated))}</p>` : ''}
   </main>
-  <footer class="site-footer">
+  <footer class="site-footer no-print">
     <div class="wrap">Made with <a href="/">CreatorGG</a>. <a href="/login/">Make your free media kit →</a></div>
   </footer>
-</body>
-</html>`;
+  ${print ? '<script>addEventListener("load", () => setTimeout(() => print(), 300));</script>' : ''}`,
+  });
 }
 
-export function renderNotFound() {
-  return `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Not found · CreatorGG</title>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/styles.css">
-</head>
-<body>
-  <header class="site-header"><div class="wrap"><a class="brand" href="/">Creator<span class="gg">GG</span></a></div></header>
+export function renderNotFound(viewer) {
+  return page({
+    title: 'Not found · CreatorGG',
+    body: `${siteHeader(viewer)}
   <main class="wrap kit">
     <section class="hero">
       <h1>No media kit here</h1>
       <p>This link isn't taken yet. It could be yours.</p>
       <p><a class="button" href="/login/">Claim it free</a></p>
     </section>
-  </main>
-</body>
-</html>`;
+  </main>`,
+  });
 }

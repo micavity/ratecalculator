@@ -8,12 +8,29 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <header class="site-header"><div class="wrap"><a class="brand" href="/">Creator<span class="gg">GG</span></a></div></header>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="/" aria-label="CreatorGG home">Creator<span class="gg">GG</span></a>
+      <nav class="site-nav" id="site-nav" aria-label="Main">
+        <a href="/">Rate calculator</a>
+        <a class="nav-cta" href="/login/">Get your media kit</a>
+      </nav>
+    </div>
+  </header>
   <main class="wrap">
     <section class="hero">
       <h1>Page not found</h1>
       <p>That page doesn't exist. <a href="/">Go to the rate calculator</a>.</p>
     </section>
   </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span>© <span class="year"></span> CreatorGG</span>
+      <nav aria-label="Footer"><a href="/">Rate calculator</a><a href="/login/">Get your media kit</a></nav>
+    </div>
+  </footer>
+  <script src="/nav.js" defer></script>
+  <script>document.querySelectorAll(".year").forEach((el) => { el.textContent = new Date().getFullYear(); });</script>
 </body>
 </html>

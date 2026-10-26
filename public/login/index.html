@@ -9,7 +9,13 @@
 </head>
 <body>
   <header class="site-header">
-    <div class="wrap"><a class="brand" href="/">Creator<span class="gg">GG</span></a></div>
+    <div class="wrap header-inner">
+      <a class="brand" href="/" aria-label="CreatorGG home">Creator<span class="gg">GG</span></a>
+      <nav class="site-nav" id="site-nav" aria-label="Main">
+        <a href="/">Rate calculator</a>
+        <a class="nav-cta" href="/login/">Get your media kit</a>
+      </nav>
+    </div>
   </header>
 
   <main class="wrap">
@@ -29,6 +35,13 @@
     </section>
   </main>
 
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span>© <span class="year"></span> CreatorGG</span>
+      <nav aria-label="Footer"><a href="/">Rate calculator</a><a href="/login/">Get your media kit</a></nav>
+    </div>
+  </footer>
+
   <script>
     const messages = {
       cancelled: 'Sign-in was cancelled.',
@@ -44,7 +57,9 @@
       el.hidden = false;
     }
     // Already signed in? Go straight to the dashboard
-    fetch('/api/me').then((res) => { if (res.ok && !code) location.replace('/dashboard/'); }).catch(() => {});
+    fetch('/api/session').then((res) => res.json()).then((data) => { if (data.signedIn && !code) location.replace('/dashboard/'); }).catch(() => {});
   </script>
+  <script src="/nav.js" defer></script>
+  <script>document.querySelectorAll(".year").forEach((el) => { el.textContent = new Date().getFullYear(); });</script>
 </body>
 </html>

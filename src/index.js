@@ -9,10 +9,13 @@ import * as authStart from './routes/auth-start.js';
 import * as authCallback from './routes/auth-callback.js';
 import * as kit from './routes/kit.js';
 import * as status from './routes/status.js';
+import * as session from './routes/session.js';
+import { ensureSchema } from './lib/migrate.js';
 
 // [method, path pattern, handler]. ":name" matches one path segment.
 const ROUTES = [
   ['GET', '/api/status', status.onRequestGet],
+  ['GET', '/api/session', session.onRequestGet],
   ['GET', '/api/me', me.onRequestGet],
   ['PUT', '/api/profile', profile.onRequestPut],
   ['POST', '/api/refresh', refresh.onRequestPost],
@@ -49,6 +52,7 @@ export default {
       if (!params) continue;
       if (request.method !== method && !(method === 'GET' && request.method === 'HEAD')) continue;
       try {
+        await ensureSchema(env);
         return await handler({ request, env, params, next, waitUntil: (p) => ctx.waitUntil(p) });
       } catch (err) {
         console.error(`${request.method} ${path} failed:`, err);

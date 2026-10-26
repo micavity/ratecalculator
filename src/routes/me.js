@@ -1,6 +1,6 @@
 import { json } from '../lib/http.js';
 import { getSessionUser } from '../lib/session.js';
-import { getConnections, profileFields } from '../lib/users.js';
+import { getConnections, getViewStats, profileFields } from '../lib/users.js';
 import { twitchConfigured } from '../lib/twitch.js';
 import { youtubeConfigured } from '../lib/youtube.js';
 
@@ -11,6 +11,7 @@ export async function onRequestGet({ request, env }) {
   return json({
     profile: profileFields(user),
     connections: await getConnections(env, user.id),
+    views: await getViewStats(env, user.id),
     available: { twitch: twitchConfigured(env), youtube: youtubeConfigured(env) },
   });
 }
