@@ -2,6 +2,7 @@ import { REGION_MULTIPLIER, FOCUS_MULTIPLIER } from '../../public/rates.js';
 import { twitchAppToken, getTwitchStats, twitchConfigured } from './twitch.js';
 import { getYouTubeStats, youtubeConfigured } from './youtube.js';
 import { THEMES, parseFeatured, parseBrands, parseAudience, brandsToText, parseJson } from './kit-content.js';
+import { withVideoStats } from './video-stats.js';
 
 // Paths that can't be used as media kit links
 export const RESERVED_SLUGS = new Set([
@@ -185,6 +186,16 @@ export async function refreshStats(env, userId, { manual = false } = {}) {
     } catch (err) {
       console.error(`Stats refresh failed for ${provider}:`, err.message);
     }
+  }
+
+  const user = await env.DB.prepare('SELECT featured FROM users WHERE id = ?').bind(userId).first();
+  const featured = parseJson(user?.featured, []);
+  if (featured.some((v) => !v.statsUpdatedAt || Date.now() - v.statsUpdatedAt >= maxAge)) {
+    const updated = await withVideoStats(env, featured);
+    // Only touch videos the creator hasn't changed since we read them
+    await env.DB.prepare('UPDATE users SET featured = ? WHERE id = ? AND featured = ?')
+      .bind(JSON.stringify(updated), userId, user.featured).run();
+    refreshed = true;
   }
   return refreshed;
 }

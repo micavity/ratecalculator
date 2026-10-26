@@ -135,3 +135,10 @@ export async function getYouTubeStats(channelId, auth) {
   }
   return computeYouTubeStats(channel, videoItems);
 }
+
+// Public details for specific videos, looked up with our API key
+export async function getYouTubeVideos(apiKey, ids) {
+  if (!ids.length) return [];
+  const data = await yt('videos', { part: 'snippet,statistics', id: ids.join(',') }, { key: apiKey });
+  return data.items || [];
+}

@@ -735,6 +735,21 @@ form.tab-panel[hidden] { display: none; }
 
 .embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
 
+.video-title {
+  margin: 10px 0 2px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.video-stats { margin: 0; color: var(--muted); font-size: 0.85rem; }
+.video-stats .badge { margin-left: 4px; }
+.print-only li { margin-bottom: 10px; }
+
 .brand-list {
   list-style: none;
   padding: 0;

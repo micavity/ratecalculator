@@ -71,3 +71,16 @@ export async function getTwitchStats(env, token, broadcasterId) {
   const data = await helix(env, token, `/channels/followers?broadcaster_id=${encodeURIComponent(broadcasterId)}&first=1`);
   return { followers: data.total ?? 0 };
 }
+
+// Public clip and VOD details, looked up by ID
+export async function getTwitchClips(env, token, ids) {
+  if (!ids.length) return [];
+  const query = ids.map((id) => `id=${encodeURIComponent(id)}`).join('&');
+  return (await helix(env, token, `/clips?${query}`)).data || [];
+}
+
+export async function getTwitchVideos(env, token, ids) {
+  if (!ids.length) return [];
+  const query = ids.map((id) => `id=${encodeURIComponent(id)}`).join('&');
+  return (await helix(env, token, `/videos?${query}`)).data || [];
+}

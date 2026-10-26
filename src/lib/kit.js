@@ -33,10 +33,29 @@ function embedUrl(video, host) {
   return `https://player.twitch.tv/?video=${encodeURIComponent(video.id)}&parent=${encodeURIComponent(host)}&autoplay=false`;
 }
 
-function featuredSection(featured, host) {
+function videoStatsLine(v, connections) {
+  const s = v.stats;
+  if (!s) return '';
+  const parts = [];
+  if (s.views != null) parts.push(`${compact.format(s.views)} views`);
+  if (s.likes != null) parts.push(`${compact.format(s.likes)} likes`);
+  if (s.comments != null) parts.push(`${compact.format(s.comments)} comments`);
+  if (s.publishedAt) parts.push(dateFormat.format(new Date(s.publishedAt)));
+  const owner = v.type === 'youtube' ? connections.youtube?.providerId : connections.twitch?.providerId;
+  const mine = owner && s.ownerId === owner
+    ? ' <span class="badge" title="This video is from a channel linked to this kit">✓ My channel</span>'
+    : '';
+  return `<p class="video-stats">${e(parts.join(' · '))}${mine}</p>`;
+}
+
+function featuredSection(featured, host, connections) {
   if (!featured.length) return '';
-  const embeds = featured.map((v) => `<div class="embed"><iframe src="${e(embedUrl(v, host))}" title="Featured video" loading="lazy" allowfullscreen allow="encrypted-media; picture-in-picture"></iframe></div>`).join('');
-  const links = featured.map((v) => `<li><a href="${e(v.url)}">${e(v.url)}</a></li>`).join('');
+  const embeds = featured.map((v) => `<div class="video">
+      <div class="embed"><iframe src="${e(embedUrl(v, host))}" title="${e(v.stats?.title || 'Featured video')}" loading="lazy" allowfullscreen allow="encrypted-media; picture-in-picture"></iframe></div>
+      ${v.stats?.title ? `<p class="video-title">${e(v.stats.title)}</p>` : ''}
+      ${videoStatsLine(v, connections)}
+    </div>`).join('');
+  const links = featured.map((v) => `<li>${v.stats?.title ? `<strong>${e(v.stats.title)}</strong><br>` : ''}${videoStatsLine(v, connections)}<a href="${e(v.url)}">${e(v.url)}</a></li>`).join('');
   return `<section class="kit-card kit-section">
     <header><h2>Featured content</h2></header>
     <div class="embeds no-print">${embeds}</div>
@@ -195,7 +214,7 @@ export function renderKit(user, connections, { origin, host, viewer, print }) {
     ${audienceTotal ? `<p class="audience"><strong>${e(count(audienceTotal))}</strong> total followers across platforms</p>` : ''}
     <div class="kit-grid">${cards || '<p class="empty">No stats yet.</p>'}</div>
     ${audienceSection(parseJson(user.audience, {}))}
-    ${featuredSection(parseJson(user.featured, []), host)}
+    ${featuredSection(parseJson(user.featured, []), host, connections)}
     ${brandsSection(parseJson(user.brands, []))}
     ${rates}
     ${updated ? `<p class="updated">Verified stats updated ${e(dateFormat.format(updated))}</p>` : ''}
