@@ -14,7 +14,8 @@ Runs entirely on Cloudflare: a Worker with static assets, plus D1 for the databa
 - `src/routes/`: backend routes
   - `kit.js`: public media kits at `/<name>`
   - `auth-start.js`, `auth-callback.js`: Twitch and YouTube sign-in
-  - the rest: dashboard API
+  - `admin.js`: admin page and API
+  - the rest: dashboard API (profile, analytics, tracked links, kit versions)
 - `src/lib/`: shared backend code
 - `src/lib/migrate.js`: database tables. New migrations run automatically on the first request after a deploy.
 
@@ -48,6 +49,19 @@ Cloudflare Worker → **Settings → Variables and Secrets**, add as encrypted s
 | `YOUTUBE_API_KEY` | Google API key |
 
 Redeploy after adding them. Check `/api/status` to confirm the site can see them.
+
+### 5. Admin access
+Add a secret `ADMIN_USER_IDS` with your CreatorGG account ID (shown at the bottom of the dashboard's Overview tab). Separate several IDs with commas. Admins can open `/admin` to search creators, gift plans and see site stats; everyone else gets a 404.
+
+## Plans
+
+| Plan | Price | Includes |
+|---|---|---|
+| Free | $0 | Media kit, verified stats, estimated rates, 3 featured videos, sharing tools, view counts |
+| Essential | $4.99/mo or $49.99/yr | Own rates and packages, no CreatorGG branding, section layout, more colors and kit styles, 6 featured videos, detailed analytics, tracked brand links, 2 extra kit versions |
+| Pro / Ultra | later | |
+
+Plans live on the `users` table (`plan`, `plan_source` = `paid` or `gift`, `plan_expires`, null = never). Limits are in `src/lib/plans.js`. Features are checked on the server; when a plan lapses, Essential settings are kept but hidden. Payments (PayPal) aren't connected yet, so plans can only be gifted from `/admin`.
 
 ## Local development
 

@@ -1,6 +1,6 @@
 // Database migrations, applied automatically on the first request after a
 // deploy. Add new steps to the end; never edit or reorder existing ones.
-const MIGRATIONS = [
+export const MIGRATIONS = [
   // 1: initial tables
   [
     `CREATE TABLE IF NOT EXISTS users (
@@ -53,6 +53,62 @@ const MIGRATIONS = [
       views INTEGER NOT NULL DEFAULT 0,
       PRIMARY KEY (user_id, day)
     )`,
+  ],
+  // 3: plans, Essential kit features, detailed analytics, tracked links, kit versions
+  [
+    "ALTER TABLE users ADD COLUMN plan TEXT NOT NULL DEFAULT 'free'",
+    "ALTER TABLE users ADD COLUMN plan_source TEXT NOT NULL DEFAULT ''",
+    'ALTER TABLE users ADD COLUMN plan_expires INTEGER',
+    'ALTER TABLE users ADD COLUMN founding INTEGER NOT NULL DEFAULT 0',
+    "ALTER TABLE users ADD COLUMN rate_mode TEXT NOT NULL DEFAULT 'estimates'",
+    "ALTER TABLE users ADD COLUMN rate_card TEXT NOT NULL DEFAULT '[]'",
+    "ALTER TABLE users ADD COLUMN packages TEXT NOT NULL DEFAULT '[]'",
+    'ALTER TABLE users ADD COLUMN hide_branding INTEGER NOT NULL DEFAULT 0',
+    "ALTER TABLE users ADD COLUMN sections TEXT NOT NULL DEFAULT '[]'",
+    "ALTER TABLE users ADD COLUMN kit_style TEXT NOT NULL DEFAULT 'auto'",
+    "ALTER TABLE users ADD COLUMN accent TEXT NOT NULL DEFAULT ''",
+    `CREATE TABLE IF NOT EXISTS kit_sources (
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      day TEXT NOT NULL,
+      source TEXT NOT NULL,
+      views INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (user_id, day, source)
+    )`,
+    `CREATE TABLE IF NOT EXISTS kit_countries (
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      day TEXT NOT NULL,
+      country TEXT NOT NULL,
+      views INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (user_id, day, country)
+    )`,
+    `CREATE TABLE IF NOT EXISTS kit_versions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      key TEXT NOT NULL,
+      name TEXT NOT NULL,
+      overrides TEXT NOT NULL DEFAULT '{}',
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      UNIQUE (user_id, key)
+    )`,
+    `CREATE TABLE IF NOT EXISTS tracked_links (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      label TEXT NOT NULL,
+      version_id TEXT,
+      opens INTEGER NOT NULL DEFAULT 0,
+      last_opened_at INTEGER,
+      created_at INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS tracked_links_user ON tracked_links(user_id)',
+    `CREATE TABLE IF NOT EXISTS link_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      link_id TEXT NOT NULL,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      at INTEGER NOT NULL,
+      country TEXT NOT NULL DEFAULT ''
+    )`,
+    'CREATE INDEX IF NOT EXISTS link_events_user ON link_events(user_id, at)',
   ],
 ];
 

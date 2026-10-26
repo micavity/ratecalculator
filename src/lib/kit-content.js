@@ -8,9 +8,70 @@ export const THEMES = {
   pink: '#ec4899',
 };
 
+// Extra colors, kit styles and a custom accent color are Essential features
+export const ESSENTIAL_THEMES = {
+  red: '#ef4444',
+  teal: '#14b8a6',
+  yellow: '#eab308',
+  indigo: '#6366f1',
+  slate: '#64748b',
+};
+
+export const KIT_STYLES = ['auto', 'dark', 'light', 'gradient'];
+
+export function isHexColor(value) {
+  return /^#[0-9a-f]{6}$/i.test(value || '');
+}
+
+// The parts of a kit below the header, in their default order
+export const SECTION_KEYS = ['platforms', 'audience', 'featured', 'brands', 'rates'];
+
+// Always returns every section exactly once, in the saved order
+export function normalizeSections(list) {
+  const seen = new Set();
+  const sections = [];
+  for (const item of Array.isArray(list) ? list : []) {
+    if (SECTION_KEYS.includes(item?.key) && !seen.has(item.key)) {
+      seen.add(item.key);
+      sections.push({ key: item.key, visible: item.visible !== false });
+    }
+  }
+  for (const key of SECTION_KEYS) {
+    if (!seen.has(key)) sections.push({ key, visible: true });
+  }
+  return sections;
+}
+
+const MAX_RATE_ROWS = 15;
+const MAX_PACKAGES = 6;
+
+function clean(value, max) {
+  return String(value ?? '').trim().slice(0, max);
+}
+
+// Creator-set prices: [{ name, price }]. Price is free text, e.g. "$150" or "From $300".
+export function parseRateCard(list) {
+  const rows = (Array.isArray(list) ? list : [])
+    .map((r) => ({ name: clean(r?.name, 60), price: clean(r?.price, 30) }))
+    .filter((r) => r.name || r.price);
+  if (rows.length > MAX_RATE_ROWS) return { error: `Add up to ${MAX_RATE_ROWS} rates.` };
+  if (rows.some((r) => !r.name || !r.price)) return { error: 'Each rate needs a name and a price.' };
+  return { value: rows };
+}
+
+// Bundles: [{ name, includes, price }]
+export function parsePackages(list) {
+  const rows = (Array.isArray(list) ? list : [])
+    .map((p) => ({ name: clean(p?.name, 60), includes: clean(p?.includes, 200), price: clean(p?.price, 30) }))
+    .filter((p) => p.name || p.includes || p.price);
+  if (rows.length > MAX_PACKAGES) return { error: `Add up to ${MAX_PACKAGES} packages.` };
+  if (rows.some((p) => !p.name || !p.price)) return { error: 'Each package needs a name and a price.' };
+  return { value: rows };
+}
+
 export const AGE_GROUPS = ['13-17', '18-24', '25-34', '35+'];
 
-const MAX_FEATURED = 3;
+const MAX_FEATURED = 6;
 const MAX_BRANDS = 12;
 const MAX_COUNTRIES = 3;
 

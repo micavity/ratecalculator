@@ -1,8 +1,12 @@
 import { REGION_MULTIPLIER, FOCUS_MULTIPLIER } from '../../public/rates.js';
 import { twitchAppToken, getTwitchStats, twitchConfigured } from './twitch.js';
 import { getYouTubeStats, youtubeConfigured } from './youtube.js';
-import { THEMES, parseFeatured, parseBrands, parseAudience, brandsToText, parseJson } from './kit-content.js';
+import {
+  THEMES, ESSENTIAL_THEMES, KIT_STYLES, isHexColor, normalizeSections, parseRateCard, parsePackages,
+  parseFeatured, parseBrands, parseAudience, brandsToText, parseJson,
+} from './kit-content.js';
 import { withVideoStats } from './video-stats.js';
+import { PLAN_RANK, effectivePlan, planLimits } from './plans.js';
 
 // Paths that can't be used as media kit links
 export const RESERVED_SLUGS = new Set([
@@ -50,6 +54,9 @@ function saveConnection(env, userId, provider, account, stats) {
   );
 }
 
+// Per-creator tables, besides users, connections and sessions
+export const USER_DATA_TABLES = ['kit_views', 'kit_sources', 'kit_countries', 'link_events', 'tracked_links', 'kit_versions'];
+
 // Profile fields copied from the merged-away profile when the kept one is empty
 const MERGE_FIELDS = [
   'avatar_url', 'bio', 'games', 'contact_email', 'twitch_avg_viewers',
@@ -86,6 +93,20 @@ async function mergeUsers(env, aId, bId, provider, account, stats) {
   if (fill.length) {
     statements.push(env.DB.prepare(`UPDATE users SET ${fill.map((f) => `${f} = ?`).join(', ')}, updated_at = ? WHERE id = ?`)
       .bind(...fill.map((f) => drop[f]), Date.now(), keep.id));
+  }
+
+  // Keep the better plan, so a paid or gifted plan is never lost
+  if (PLAN_RANK[effectivePlan(drop)] > PLAN_RANK[effectivePlan(keep)]) {
+    statements.push(env.DB.prepare('UPDATE users SET plan = ?, plan_source = ?, plan_expires = ? WHERE id = ?')
+      .bind(drop.plan, drop.plan_source, drop.plan_expires, keep.id));
+  }
+  if (drop.founding && !keep.founding) {
+    statements.push(env.DB.prepare('UPDATE users SET founding = 1 WHERE id = ?').bind(keep.id));
+  }
+
+  // Analytics, links and versions on the merged-away profile go with it
+  for (const table of USER_DATA_TABLES) {
+    statements.push(env.DB.prepare(`DELETE FROM ${table} WHERE user_id = ?`).bind(drop.id));
   }
 
   // Keep the creator signed in, now on the kept profile
@@ -197,6 +218,17 @@ export async function refreshStats(env, userId, { manual = false } = {}) {
       .bind(JSON.stringify(updated), userId, user.featured).run();
     refreshed = true;
   }
+
+  const { results: versions } = await env.DB.prepare('SELECT id, overrides FROM kit_versions WHERE user_id = ?').bind(userId).all();
+  for (const version of versions) {
+    const overrides = parseJson(version.overrides, {});
+    const videos = overrides.featured || [];
+    if (!videos.some((v) => !v.statsUpdatedAt || Date.now() - v.statsUpdatedAt >= maxAge)) continue;
+    overrides.featured = await withVideoStats(env, videos);
+    await env.DB.prepare('UPDATE kit_versions SET overrides = ? WHERE id = ? AND overrides = ?')
+      .bind(JSON.stringify(overrides), version.id, version.overrides).run();
+    refreshed = true;
+  }
   return refreshed;
 }
 
@@ -234,6 +266,13 @@ export function profileFields(user) {
     brands: brandsToText(parseJson(user.brands, [])),
     audience: parseJson(user.audience, {}),
     theme: user.theme,
+    rateMode: user.rate_mode,
+    rateCard: parseJson(user.rate_card, []),
+    packages: parseJson(user.packages, []),
+    hideBranding: Boolean(user.hide_branding),
+    sections: normalizeSections(parseJson(user.sections, [])),
+    kitStyle: user.kit_style,
+    accent: user.accent,
   };
 }
 
@@ -308,9 +347,50 @@ export function validateProfile(body) {
   if (audience.error) return fail('audience', audience.error);
   values.audience = JSON.stringify(audience.value);
 
-  values.theme = body.theme in THEMES ? body.theme : 'purple';
+  values.theme = body.theme in THEMES || body.theme in ESSENTIAL_THEMES ? body.theme : 'purple';
+
+  // Essential settings
+  values.rate_mode = body.rateMode === 'custom' ? 'custom' : 'estimates';
+  const rateCard = parseRateCard(body.rateCard);
+  if (rateCard.error) return fail('rateCard', rateCard.error);
+  values.rate_card = JSON.stringify(rateCard.value);
+  const packages = parsePackages(body.packages);
+  if (packages.error) return fail('packages', packages.error);
+  values.packages = JSON.stringify(packages.value);
+  values.hide_branding = body.hideBranding ? 1 : 0;
+  values.sections = JSON.stringify(normalizeSections(body.sections));
+  values.kit_style = KIT_STYLES.includes(body.kitStyle) ? body.kitStyle : 'auto';
+  values.accent = isHexColor(body.accent) ? body.accent.toLowerCase() : '';
 
   return { values };
+}
+
+const ESSENTIAL_COLUMNS = ['rate_mode', 'rate_card', 'packages', 'hide_branding', 'sections', 'kit_style', 'accent'];
+
+/**
+ * Applies plan limits to validated profile values. Settings the creator's
+ * plan doesn't include are left out, so whatever was saved before stays
+ * as it was. Returns { values } or { error, field }.
+ */
+export function applyPlanLimits(values, user) {
+  const limits = planLimits(user);
+  // Videos beyond the limit are allowed only if they're unchanged from
+  // before, e.g. after a plan lapses. They're kept but not shown.
+  const key = (v) => `${v.type}:${v.id}`;
+  const extra = JSON.parse(values.featured).slice(limits.featured).map(key);
+  const savedExtra = parseJson(user.featured, []).slice(limits.featured).map(key);
+  if (extra.length && extra.join() !== savedExtra.join()) {
+    return {
+      field: 'featured',
+      error: `Your plan includes up to ${limits.featured} featured videos.${limits.essential ? '' : ' Essential includes 6.'}`,
+    };
+  }
+  if (limits.essential) return { values };
+
+  const allowed = { ...values };
+  for (const column of ESSENTIAL_COLUMNS) delete allowed[column];
+  if (allowed.theme in ESSENTIAL_THEMES) delete allowed.theme;
+  return { values: allowed };
 }
 
 export async function updateProfile(env, userId, values) {
@@ -340,19 +420,6 @@ export function rateInput(user, connections) {
     ttViews: user.tiktok_avg_views,
     ttEngagement: user.tiktok_engagement,
   };
-}
-
-const BOT_PATTERN = /bot|crawl|spider|preview|discord|slack|facebookexternalhit|twitter|whatsapp|telegram|embed|curl|wget|python/i;
-
-// Counts a media kit view, skipping bots, link previews and the creator themselves
-export async function recordView(env, request, ownerId, viewer) {
-  if (viewer?.id === ownerId) return;
-  if (BOT_PATTERN.test(request.headers.get('user-agent') || '')) return;
-  const day = new Date().toISOString().slice(0, 10);
-  await env.DB.prepare(
-    `INSERT INTO kit_views (user_id, day, views) VALUES (?, ?, 1)
-     ON CONFLICT (user_id, day) DO UPDATE SET views = views + 1`,
-  ).bind(ownerId, day).run();
 }
 
 export async function getViewStats(env, userId) {

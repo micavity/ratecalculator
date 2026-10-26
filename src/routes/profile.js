@@ -1,6 +1,6 @@
 import { json, sameOrigin } from '../lib/http.js';
 import { getSessionUser } from '../lib/session.js';
-import { validateProfile, updateProfile } from '../lib/users.js';
+import { validateProfile, updateProfile, applyPlanLimits } from '../lib/users.js';
 import { withVideoStats } from '../lib/video-stats.js';
 import { parseJson } from '../lib/kit-content.js';
 
@@ -16,7 +16,9 @@ export async function onRequestPut({ request, env }) {
     return json({ error: 'Invalid request' }, 400);
   }
 
-  const { values, error, field } = validateProfile(body);
+  const validated = validateProfile(body);
+  if (validated.error) return json({ error: validated.error, field: validated.field }, 400);
+  const { values, error, field } = applyPlanLimits(validated.values, user);
   if (error) return json({ error, field }, 400);
 
   if (values.slug !== user.slug) {

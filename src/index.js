@@ -11,8 +11,13 @@ import * as kit from './routes/kit.js';
 import * as status from './routes/status.js';
 import * as session from './routes/session.js';
 import * as account from './routes/account.js';
+import * as analytics from './routes/analytics.js';
+import * as links from './routes/links.js';
+import * as versions from './routes/versions.js';
+import * as admin from './routes/admin.js';
 import { ensureSchema } from './lib/migrate.js';
 import { refreshStaleUsers } from './lib/users.js';
+import { pruneOldEvents } from './lib/analytics.js';
 
 // [method, path pattern, handler]. ":name" matches one path segment.
 const ROUTES = [
@@ -21,12 +26,24 @@ const ROUTES = [
   ['GET', '/api/me', me.onRequestGet],
   ['PUT', '/api/profile', profile.onRequestPut],
   ['DELETE', '/api/account', account.onRequestDelete],
+  ['GET', '/api/analytics', analytics.onRequestGet],
+  ['POST', '/api/links', links.onRequestPost],
+  ['DELETE', '/api/links/:id', links.onRequestDelete],
+  ['POST', '/api/versions', versions.onRequestPost],
+  ['PUT', '/api/versions/:id', versions.onRequestPut],
+  ['DELETE', '/api/versions/:id', versions.onRequestDelete],
   ['POST', '/api/refresh', refresh.onRequestPost],
   ['POST', '/api/logout', logout.onRequestPost],
   ['DELETE', '/api/connections/:provider', disconnect.onRequestDelete],
   ['GET', '/auth/:provider', authStart.onRequestGet],
   ['GET', '/auth/:provider/callback', authCallback.onRequestGet],
+  ['GET', '/api/admin/stats', admin.stats],
+  ['GET', '/api/admin/users', admin.users],
+  ['POST', '/api/admin/users/:id/plan', admin.setPlan],
+  ['POST', '/api/admin/users/:id/founding', admin.setFounding],
+  ['GET', '/admin', admin.page],
   ['GET', '/:slug', kit.onRequestGet],
+  ['GET', '/:slug/:version', kit.onRequestGet],
 ];
 
 function match(pattern, path) {
@@ -70,5 +87,6 @@ export default {
   async scheduled(event, env, ctx) {
     await ensureSchema(env);
     ctx.waitUntil(refreshStaleUsers(env));
+    ctx.waitUntil(pruneOldEvents(env));
   },
 };

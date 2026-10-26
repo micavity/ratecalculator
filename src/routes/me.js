@@ -1,6 +1,8 @@
 import { json } from '../lib/http.js';
 import { getSessionUser } from '../lib/session.js';
 import { getConnections, getViewStats, profileFields } from '../lib/users.js';
+import { planInfo, planLimits } from '../lib/plans.js';
+import { getVersions, versionFields } from '../lib/versions.js';
 import { twitchConfigured } from '../lib/twitch.js';
 import { youtubeConfigured } from '../lib/youtube.js';
 
@@ -9,9 +11,13 @@ export async function onRequestGet({ request, env }) {
   const user = await getSessionUser(request, env);
   if (!user) return json({ error: 'Not signed in' }, 401);
   return json({
+    accountId: user.id,
     profile: profileFields(user),
     connections: await getConnections(env, user.id),
     views: await getViewStats(env, user.id),
+    plan: planInfo(user),
+    limits: planLimits(user),
+    versions: (await getVersions(env, user.id)).map(versionFields),
     available: { twitch: twitchConfigured(env), youtube: youtubeConfigured(env) },
   });
 }

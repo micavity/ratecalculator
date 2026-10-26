@@ -21,9 +21,12 @@
   <main class="wrap dashboard" id="app" hidden>
     <p class="alert" id="banner" hidden></p>
 
+    <div class="plan-bar" id="planBar"></div>
+
     <div class="tabs" role="tablist">
       <button type="button" role="tab" class="tab" id="tab-overview" aria-controls="panel-overview" aria-selected="true">Overview</button>
       <button type="button" role="tab" class="tab" id="tab-edit" aria-controls="profile" aria-selected="false">Edit kit</button>
+      <button type="button" role="tab" class="tab" id="tab-versions" aria-controls="panel-versions" aria-selected="false">Kit versions</button>
     </div>
 
     <!-- Overview -->
@@ -47,6 +50,29 @@
           <div class="stat"><span class="stat-value" id="viewsTotal">0</span><span class="stat-label">All time</span></div>
         </div>
         <p class="small muted">Your own visits and link previews don't count.</p>
+      </section>
+
+      <section class="panel essential-panel" id="analyticsPanel" data-essential-panel>
+        <div class="section-head">
+          <h2>Detailed analytics <span class="plan-pill">Essential</span></h2>
+          <select id="analyticsDays" aria-label="Time range">
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
+        </div>
+        <div id="analyticsBody"></div>
+      </section>
+
+      <section class="panel essential-panel" id="linksPanel" data-essential-panel>
+        <h2>Tracked brand links <span class="plan-pill">Essential</span></h2>
+        <p class="small muted">Make a link for each brand you pitch. When they open your kit through it, you'll see it here.</p>
+        <form class="link-form" id="linkForm">
+          <input type="text" name="label" maxlength="60" placeholder="Who is it for? e.g. Razer" aria-label="Who the link is for">
+          <select name="versionId" aria-label="Which kit to open"></select>
+          <button type="submit">Create link</button>
+        </form>
+        <div id="recentOpens"></div>
+        <div id="linkList"></div>
       </section>
 
       <section class="panel">
@@ -94,7 +120,22 @@
         <h2>Delete account</h2>
         <p class="small muted">Permanently deletes your media kit, profile, linked accounts and view history. Your kit link stops working right away. This can't be undone.</p>
         <button type="button" class="button-danger" id="deleteAccount">Delete my account</button>
+        <p class="small muted account-id">Account ID: <code id="accountId"></code></p>
       </section>
+    </div>
+
+    <!-- Kit versions -->
+    <div id="panel-versions" role="tabpanel" aria-labelledby="tab-versions" class="tab-panel" hidden>
+      <section class="panel essential-panel" data-essential-panel>
+        <h2>Kit versions <span class="plan-pill">Essential</span></h2>
+        <p class="small muted">Make up to 2 extra versions of your kit, for example one for tech brands with different videos and rates. Each gets its own link. Anything you don't change stays the same as your main kit.</p>
+        <form class="link-form" id="newVersionForm">
+          <input type="text" name="name" maxlength="40" placeholder="Name, e.g. Tech brands" aria-label="Version name">
+          <span class="prefixed"><span class="prefix" id="versionPrefix"></span><input type="text" name="key" maxlength="30" placeholder="tech" aria-label="Version link"></span>
+          <button type="submit">Create version</button>
+        </form>
+      </section>
+      <div id="versionList" class="version-list"></div>
     </div>
 
     <!-- Edit kit -->
@@ -120,7 +161,7 @@
         <small>Shown as a "Work with me" button so brands can reach you.</small>
       </label>
 
-      <h2>Kit color</h2>
+      <h2>Kit look</h2>
       <div class="theme-picker" role="radiogroup" aria-label="Kit color">
         <label class="swatch" style="--swatch:#8b5cf6"><input type="radio" name="theme" value="purple"><span>Purple</span></label>
         <label class="swatch" style="--swatch:#3b82f6"><input type="radio" name="theme" value="blue"><span>Blue</span></label>
@@ -128,12 +169,40 @@
         <label class="swatch" style="--swatch:#f97316"><input type="radio" name="theme" value="orange"><span>Orange</span></label>
         <label class="swatch" style="--swatch:#ec4899"><input type="radio" name="theme" value="pink"><span>Pink</span></label>
       </div>
+      <div class="essential-group" data-essential>
+        <p class="group-title">More colors and styles <span class="plan-pill">Essential</span></p>
+        <div class="theme-picker" role="radiogroup" aria-label="More kit colors">
+          <label class="swatch" style="--swatch:#ef4444"><input type="radio" name="theme" value="red"><span>Red</span></label>
+          <label class="swatch" style="--swatch:#14b8a6"><input type="radio" name="theme" value="teal"><span>Teal</span></label>
+          <label class="swatch" style="--swatch:#eab308"><input type="radio" name="theme" value="yellow"><span>Yellow</span></label>
+          <label class="swatch" style="--swatch:#6366f1"><input type="radio" name="theme" value="indigo"><span>Indigo</span></label>
+          <label class="swatch" style="--swatch:#64748b"><input type="radio" name="theme" value="slate"><span>Slate</span></label>
+        </div>
+        <div class="field-row">
+          <label class="toggle"><input type="checkbox" name="useAccent"> Use my own color <input type="color" name="accentColor" value="#8b5cf6" aria-label="Custom color"></label>
+          <label>Kit style
+            <select name="kitStyle">
+              <option value="auto">Match the visitor's device</option>
+              <option value="dark">Always dark</option>
+              <option value="light">Always light</option>
+              <option value="gradient">Dark with color glow</option>
+            </select>
+          </label>
+        </div>
+        <label class="toggle"><input type="checkbox" name="hideBranding"> Remove "Made with CreatorGG" and the CreatorGG header from my kit</label>
+      </div>
 
       <h2>Featured content</h2>
-      <p class="muted small">Up to 3 YouTube videos, Twitch clips or Twitch VODs. They play right on your kit, with their views, likes and comments shown underneath. Videos from your linked channels get a "✓ My channel" badge.</p>
+      <p class="muted small">YouTube videos, Twitch clips or Twitch VODs. They play right on your kit, with their views, likes and comments shown underneath. Videos from your linked channels get a "✓ My channel" badge.</p>
       <label>Video 1 <input type="url" name="featured" placeholder="https://youtube.com/watch?v=… or https://clips.twitch.tv/…"></label>
       <label>Video 2 <input type="url" name="featured"></label>
       <label>Video 3 <input type="url" name="featured"></label>
+      <div class="essential-group" data-essential>
+        <p class="group-title">3 more videos <span class="plan-pill">Essential</span></p>
+        <label>Video 4 <input type="url" name="featured"></label>
+        <label>Video 5 <input type="url" name="featured"></label>
+        <label>Video 6 <input type="url" name="featured"></label>
+      </div>
 
       <h2>Brands I've worked with</h2>
       <label>One brand per line
@@ -240,8 +309,33 @@
       </label>
       <label class="toggle">
         <input type="checkbox" name="showRates">
-        Show estimated rates on my media kit
+        Show rates on my media kit
       </label>
+
+      <div class="essential-group" data-essential>
+        <p class="group-title">Your own rates and packages <span class="plan-pill">Essential</span></p>
+        <div class="radio-row" role="radiogroup" aria-label="Which rates to show">
+          <label class="toggle"><input type="radio" name="rateMode" value="estimates"> Show estimated rates</label>
+          <label class="toggle"><input type="radio" name="rateMode" value="custom"> Show my own rates</label>
+        </div>
+        <h3 class="sub-heading">My rates</h3>
+        <div class="row-editor" id="rateCardEditor" data-field="rateCard"></div>
+        <div class="actions">
+          <button type="button" class="button-secondary" id="addRate">Add a rate</button>
+          <button type="button" class="button-link" id="fillFromEstimates">Start from my estimates</button>
+        </div>
+        <h3 class="sub-heading">Packages</h3>
+        <div class="row-editor" id="packagesEditor" data-field="packages"></div>
+        <div class="actions">
+          <button type="button" class="button-secondary" id="addPackage">Add a package</button>
+        </div>
+      </div>
+
+      <h2>Kit layout</h2>
+      <div class="essential-group" data-essential>
+        <p class="group-title">Reorder or hide sections <span class="plan-pill">Essential</span></p>
+        <ul class="section-list" id="sectionList"></ul>
+      </div>
 
       <div class="save-bar">
         <button type="submit" id="save">Save changes</button>

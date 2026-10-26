@@ -1,7 +1,10 @@
 import { escapeHtml as e } from './http.js';
 import { estimateRates, formatRange } from '../../public/rates.js';
 import { rateInput } from './users.js';
-import { THEMES, AGE_GROUPS, hasAudience, parseJson } from './kit-content.js';
+import {
+  THEMES, ESSENTIAL_THEMES, AGE_GROUPS, isHexColor, normalizeSections, hasAudience, parseJson,
+} from './kit-content.js';
+import { planLimits } from './plans.js';
 
 const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
 const dateFormat = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -98,10 +101,17 @@ function audienceSection(audience) {
   </section>`;
 }
 
-function themeStyle(theme) {
-  const hex = THEMES[theme] || THEMES.purple;
+function accentStyle(hex) {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
   return `--accent:${hex};--accent-soft:rgba(${r},${g},${b},0.15)`;
+}
+
+// The kit color: Essential creators can use extra colors or any custom color
+function kitColor(user, essential) {
+  if (essential && isHexColor(user.accent)) return user.accent;
+  if (THEMES[user.theme]) return THEMES[user.theme];
+  if (essential && ESSENTIAL_THEMES[user.theme]) return ESSENTIAL_THEMES[user.theme];
+  return THEMES.purple;
 }
 
 export function siteHeader(viewer) {
@@ -116,9 +126,9 @@ export function siteHeader(viewer) {
   </header>`;
 }
 
-function page({ title, head = '', bodyStyle = '', body }) {
+function page({ title, head = '', bodyStyle = '', kitStyle = '', body }) {
   return `<!doctype html>
-<html lang="en">
+<html lang="en"${kitStyle ? ` data-kit-style="${e(kitStyle)}"` : ''}>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -133,7 +143,36 @@ ${body}
 </html>`;
 }
 
-export function renderKit(user, connections, { origin, host, viewer, print }) {
+function estimatedRatesSection(user, connections) {
+  const { sections, bundle } = estimateRates(rateInput(user, connections));
+  if (!sections.length) return '';
+  const rows = sections.map((s) => `<h3>${e(s.name)}</h3>${s.rates.map(([label, range]) => `<div class="rate"><span>${e(label)}</span><span class="amount">${e(formatRange(range))}</span></div>`).join('')}`).join('');
+  const bundleRow = bundle ? `<h3>Bundle</h3><div class="rate bundle"><span>One of each platform's main deal</span><span class="amount">${e(formatRange(bundle))}</span></div>` : '';
+  return `<section class="kit-card kit-section"><header><h2>Sponsorship rates</h2></header>${rows}${bundleRow}<p class="note">Starting rates. Custom packages available.</p></section>`;
+}
+
+function customRatesSection(rateCard, packages) {
+  const rows = rateCard.map((r) => `<div class="rate"><span>${e(r.name)}</span><span class="amount">${e(r.price)}</span></div>`).join('');
+  const bundles = packages.map((p) => `<div class="package">
+      <div class="package-head"><strong>${e(p.name)}</strong><span class="amount">${e(p.price)}</span></div>
+      ${p.includes ? `<p>${e(p.includes)}</p>` : ''}
+    </div>`).join('');
+  return `<section class="kit-card kit-section">
+    <header><h2>Sponsorship rates</h2></header>
+    ${rows}
+    ${bundles ? `<h3>Packages</h3><div class="packages">${bundles}</div>` : ''}
+    <p class="note">Custom packages available on request.</p>
+  </section>`;
+}
+
+/**
+ * Renders a public media kit. `user` may already have a kit version's
+ * overrides applied; `path` is the kit's own path (with the version, if any).
+ */
+export function renderKit(user, connections, { origin, host, viewer, print, path = `/${user.slug}` }) {
+  const limits = planLimits(user);
+  const essential = limits.essential;
+  const hideBranding = essential && Boolean(user.hide_branding);
   const twitch = connections.twitch;
   const youtube = connections.youtube;
   const tiktokUrl = user.tiktok_handle ? `https://www.tiktok.com/@${encodeURIComponent(user.tiktok_handle)}` : null;
@@ -161,13 +200,23 @@ export function renderKit(user, connections, { origin, host, viewer, print }) {
 
   let rates = '';
   if (user.show_rates) {
-    const { sections, bundle } = estimateRates(rateInput(user, connections));
-    if (sections.length) {
-      const rows = sections.map((s) => `<h3>${e(s.name)}</h3>${s.rates.map(([label, range]) => `<div class="rate"><span>${e(label)}</span><span class="amount">${e(formatRange(range))}</span></div>`).join('')}`).join('');
-      const bundleRow = bundle ? `<h3>Bundle</h3><div class="rate bundle"><span>One of each platform's main deal</span><span class="amount">${e(formatRange(bundle))}</span></div>` : '';
-      rates = `<section class="kit-card kit-section"><header><h2>Sponsorship rates</h2></header>${rows}${bundleRow}<p class="note">Starting rates. Custom packages available.</p></section>`;
-    }
+    const rateCard = parseJson(user.rate_card, []);
+    const packages = parseJson(user.packages, []);
+    rates = essential && user.rate_mode === 'custom' && (rateCard.length || packages.length)
+      ? customRatesSection(rateCard, packages)
+      : estimatedRatesSection(user, connections);
   }
+
+  const sectionHtml = {
+    platforms: `${audienceTotal ? `<p class="audience"><strong>${e(count(audienceTotal))}</strong> total followers across platforms</p>` : ''}
+    <div class="kit-grid">${cards || '<p class="empty">No stats yet.</p>'}</div>`,
+    audience: audienceSection(parseJson(user.audience, {})),
+    featured: featuredSection(parseJson(user.featured, []).slice(0, limits.featured), host, connections),
+    brands: brandsSection(parseJson(user.brands, [])),
+    rates,
+  };
+  const order = essential ? normalizeSections(parseJson(user.sections, [])) : normalizeSections([]);
+  const body = order.filter((s) => s.visible).map((s) => sectionHtml[s.key]).join('\n    ');
 
   const games = user.games
     .split(',')
@@ -181,7 +230,7 @@ export function renderKit(user, connections, { origin, host, viewer, print }) {
   const avatar = user.avatar_url
     ? `<img class="avatar" src="${e(user.avatar_url)}" alt="" width="96" height="96">`
     : `<div class="avatar avatar-fallback" aria-hidden="true">${e(user.display_name.charAt(0).toUpperCase())}</div>`;
-  const pageUrl = `${origin}/${user.slug}`;
+  const pageUrl = `${origin}${path}`;
   const contact = user.contact_email
     ? `<a class="button no-print" href="mailto:${e(user.contact_email)}?subject=${encodeURIComponent(`Sponsorship inquiry for ${user.display_name}`)}">Work with me</a>
        <p class="print-only">Contact: ${e(user.contact_email)} · ${e(pageUrl)}</p>`
@@ -190,16 +239,22 @@ export function renderKit(user, connections, { origin, host, viewer, print }) {
   const ownerBar = viewer?.id === user.id
     ? '<p class="owner-bar no-print">This is your media kit. <a href="/dashboard/">Edit it on your dashboard →</a></p>'
     : '';
+  const footer = hideBranding
+    ? ''
+    : `<footer class="site-footer no-print">
+    <div class="wrap footer-inner"><span>Made with <a href="/">CreatorGG</a>. <a href="/login/">Make your free media kit →</a></span><nav aria-label="Footer"><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a></nav></div>
+  </footer>`;
 
   return page({
-    title: `${user.display_name} · Media Kit · CreatorGG`,
-    bodyStyle: themeStyle(user.theme),
+    title: hideBranding ? `${user.display_name} · Media Kit` : `${user.display_name} · Media Kit · CreatorGG`,
+    bodyStyle: accentStyle(kitColor(user, essential)),
+    kitStyle: essential && user.kit_style !== 'auto' ? user.kit_style : '',
     head: `<meta name="description" content="${e(description.slice(0, 160))}">
   <meta property="og:title" content="${e(user.display_name)} · Media Kit">
   <meta property="og:description" content="${e(description.slice(0, 200))}">
   <meta property="og:url" content="${e(pageUrl)}">
   ${user.avatar_url ? `<meta property="og:image" content="${e(user.avatar_url)}">` : ''}`,
-    body: `${siteHeader(viewer)}
+    body: `${hideBranding ? '' : siteHeader(viewer)}
   <main class="wrap kit">
     ${ownerBar}
     <section class="kit-hero">
@@ -211,17 +266,10 @@ export function renderKit(user, connections, { origin, host, viewer, print }) {
         ${contact}
       </div>
     </section>
-    ${audienceTotal ? `<p class="audience"><strong>${e(count(audienceTotal))}</strong> total followers across platforms</p>` : ''}
-    <div class="kit-grid">${cards || '<p class="empty">No stats yet.</p>'}</div>
-    ${audienceSection(parseJson(user.audience, {}))}
-    ${featuredSection(parseJson(user.featured, []), host, connections)}
-    ${brandsSection(parseJson(user.brands, []))}
-    ${rates}
+    ${body}
     ${updated ? `<p class="updated">Verified stats updated ${e(dateFormat.format(updated))}</p>` : ''}
   </main>
-  <footer class="site-footer no-print">
-    <div class="wrap footer-inner"><span>Made with <a href="/">CreatorGG</a>. <a href="/login/">Make your free media kit →</a></span><nav aria-label="Footer"><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a></nav></div>
-  </footer>
+  ${footer}
   ${print ? '<script>addEventListener("load", () => setTimeout(() => print(), 300));</script>' : ''}`,
   });
 }
