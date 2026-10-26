@@ -8,9 +8,11 @@ import * as disconnect from './routes/disconnect.js';
 import * as authStart from './routes/auth-start.js';
 import * as authCallback from './routes/auth-callback.js';
 import * as kit from './routes/kit.js';
+import * as status from './routes/status.js';
 
 // [method, path pattern, handler]. ":name" matches one path segment.
 const ROUTES = [
+  ['GET', '/api/status', status.onRequestGet],
   ['GET', '/api/me', me.onRequestGet],
   ['PUT', '/api/profile', profile.onRequestPut],
   ['POST', '/api/refresh', refresh.onRequestPost],
