@@ -367,6 +367,22 @@ textarea { resize: vertical; }
 .cta { margin-top: 12px; }
 .cta a { font-weight: 600; }
 
+/* Legal pages */
+
+.legal {
+  max-width: 720px;
+  padding-top: 32px;
+  padding-bottom: 24px;
+}
+
+.legal h1 { margin: 0 0 4px; font-size: clamp(1.8rem, 4vw, 2.3rem); letter-spacing: -0.02em; }
+.legal h2 { margin: 32px 0 8px; font-size: 1.2rem; }
+.legal h3 { margin: 20px 0 6px; font-size: 1rem; }
+.legal p, .legal li { color: var(--muted); }
+.legal strong { color: var(--text); }
+.legal li { margin-bottom: 6px; }
+.legal code { font-size: 0.9em; background: var(--panel-2); padding: 1px 6px; border-radius: 6px; }
+
 /* Sign in */
 
 .auth-panel {
@@ -485,6 +501,10 @@ textarea { resize: vertical; }
 }
 
 .save-status { font-size: 0.9rem; color: var(--muted); }
+
+.danger-zone { border-color: rgba(225, 29, 72, 0.4); }
+.danger-zone p { margin: 0 0 12px; }
+.button-danger { background: #e11d48; }
 .save-status.ok { color: var(--good); }
 .save-status.error { color: #e11d48; }
 

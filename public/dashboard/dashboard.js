@@ -427,6 +427,17 @@ document.getElementById('refresh').addEventListener('click', async (event) => {
   }
 });
 
+document.getElementById('deleteAccount').addEventListener('click', async () => {
+  const answer = prompt('This permanently deletes your CreatorGG account and media kit.\n\nType DELETE to confirm.');
+  if (answer?.trim().toUpperCase() !== 'DELETE') return;
+  try {
+    await api('/api/account', { method: 'DELETE' });
+    location.href = '/?deleted=1';
+  } catch (err) {
+    showBanner(err.message);
+  }
+});
+
 async function init() {
   state = await api('/api/me');
   const params = new URLSearchParams(location.search);

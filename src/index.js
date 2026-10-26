@@ -10,7 +10,9 @@ import * as authCallback from './routes/auth-callback.js';
 import * as kit from './routes/kit.js';
 import * as status from './routes/status.js';
 import * as session from './routes/session.js';
+import * as account from './routes/account.js';
 import { ensureSchema } from './lib/migrate.js';
+import { refreshStaleUsers } from './lib/users.js';
 
 // [method, path pattern, handler]. ":name" matches one path segment.
 const ROUTES = [
@@ -18,6 +20,7 @@ const ROUTES = [
   ['GET', '/api/session', session.onRequestGet],
   ['GET', '/api/me', me.onRequestGet],
   ['PUT', '/api/profile', profile.onRequestPut],
+  ['DELETE', '/api/account', account.onRequestDelete],
   ['POST', '/api/refresh', refresh.onRequestPost],
   ['POST', '/api/logout', logout.onRequestPost],
   ['DELETE', '/api/connections/:provider', disconnect.onRequestDelete],
@@ -60,5 +63,12 @@ export default {
       }
     }
     return next();
+  },
+
+  // Cron trigger (see wrangler.toml): keeps stored platform stats fresh,
+  // since YouTube's rules don't allow keeping data older than 30 days
+  async scheduled(event, env, ctx) {
+    await ensureSchema(env);
+    ctx.waitUntil(refreshStaleUsers(env));
   },
 };

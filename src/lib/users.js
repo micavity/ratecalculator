@@ -6,7 +6,7 @@ import { withVideoStats } from './video-stats.js';
 
 // Paths that can't be used as media kit links
 export const RESERVED_SLUGS = new Set([
-  'about', 'admin', 'api', 'app', 'assets', 'auth', 'blog', 'brands', 'contact', 'creatorgg',
+  'about', 'admin', 'api', 'app', 'assets', 'auth', 'blog', 'brands', 'contact', 'creatorgg', 'vendor',
   'dashboard', 'help', 'index', 'kit', 'login', 'logout', 'pricing', 'privacy', 'settings',
   'signup', 'static', 'support', 'terms', 'u', 'www',
 ]);
@@ -198,6 +198,18 @@ export async function refreshStats(env, userId, { manual = false } = {}) {
     refreshed = true;
   }
   return refreshed;
+}
+
+// Refreshes creators whose stats are over a day old, oldest first.
+// Limited per run to stay well within API quotas.
+export async function refreshStaleUsers(env, limit = 50) {
+  const { results } = await env.DB.prepare(
+    `SELECT user_id, MIN(COALESCE(stats_updated_at, 0)) AS oldest FROM connections
+     GROUP BY user_id HAVING oldest < ? ORDER BY oldest LIMIT ?`,
+  ).bind(Date.now() - STALE_MS, limit).all();
+  for (const row of results) {
+    await refreshStats(env, row.user_id).catch((err) => console.error('Scheduled refresh failed:', err.message));
+  }
 }
 
 // The fields a creator can edit, as sent to the dashboard

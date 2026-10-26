@@ -89,6 +89,12 @@
         </div>
         <div id="connections"></div>
       </section>
+
+      <section class="panel danger-zone">
+        <h2>Delete account</h2>
+        <p class="small muted">Permanently deletes your media kit, profile, linked accounts and view history. Your kit link stops working right away. This can't be undone.</p>
+        <button type="button" class="button-danger" id="deleteAccount">Delete my account</button>
+      </section>
     </div>
 
     <!-- Edit kit -->
@@ -225,8 +231,16 @@
     </form>
   </main>
 
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <span>© <span class="year"></span> CreatorGG</span>
+      <nav aria-label="Footer"><a href="/">Rate calculator</a><a href="/login/">Get your media kit</a><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a></nav>
+    </div>
+  </footer>
+
   <script src="/nav.js" defer></script>
   <script src="/vendor/qrcode.js"></script>
   <script type="module" src="/dashboard/dashboard.js"></script>
+  <script>document.querySelectorAll(".year").forEach((el) => { el.textContent = new Date().getFullYear(); });</script>
 </body>
 </html>

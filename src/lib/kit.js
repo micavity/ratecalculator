@@ -220,7 +220,7 @@ export function renderKit(user, connections, { origin, host, viewer, print }) {
     ${updated ? `<p class="updated">Verified stats updated ${e(dateFormat.format(updated))}</p>` : ''}
   </main>
   <footer class="site-footer no-print">
-    <div class="wrap">Made with <a href="/">CreatorGG</a>. <a href="/login/">Make your free media kit →</a></div>
+    <div class="wrap footer-inner"><span>Made with <a href="/">CreatorGG</a>. <a href="/login/">Make your free media kit →</a></span><nav aria-label="Footer"><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a></nav></div>
   </footer>
   ${print ? '<script>addEventListener("load", () => setTimeout(() => print(), 300));</script>' : ''}`,
   });
