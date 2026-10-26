@@ -6,6 +6,8 @@ Free sponsorship rate calculator and media kits for gaming creators on Twitch, Y
 
 Runs entirely on Cloudflare: a Worker with static assets, plus D1 for the database.
 
+See `PROJECT_NOTES.md` for decisions, status and the roadmap.
+
 ## Project layout
 
 - `public/`: static pages: homepage, `calculator/`, `pricing/`, `affiliates/`, `login/`, `dashboard/`, `privacy/`, `terms/`
