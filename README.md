@@ -18,6 +18,7 @@ See `PROJECT_NOTES.md` for decisions, status and the roadmap.
   - `auth-start.js`, `auth-callback.js`: Twitch and YouTube sign-in
   - `admin.js`: admin page and API
   - `deals.js`: Pro deal tracker API
+  - `games.js`: game suggestions with Twitch box art (`src/lib/games.js` matches listed games on save)
   - the rest: dashboard API (profile, analytics, tracked links, kit versions)
 - `src/lib/`: shared backend code
 - `src/lib/migrate.js`: database tables. New migrations run automatically on the first request after a deploy.
@@ -85,7 +86,7 @@ Plans live on the `users` table (`plan`, `plan_source` = `paid` or `gift`, `plan
 npx wrangler dev
 ```
 
-Put local secrets in `.dev.vars` (not committed).
+Put local secrets in `.dev.vars` (not committed). For testing without real services, `STRIPE_API_BASE`, `TWITCH_API_BASE` and `TWITCH_TOKEN_URL` can point at local test servers.
 
 ## How rates are estimated
 

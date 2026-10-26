@@ -199,7 +199,8 @@ export function hasAudience(audience) {
 
 export function parseJson(text, fallback) {
   try {
-    return JSON.parse(text);
+    // Empty columns (NULL) parse to null, so they get the fallback too
+    return JSON.parse(text) ?? fallback;
   } catch {
     return fallback;
   }

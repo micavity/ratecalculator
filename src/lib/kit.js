@@ -6,6 +6,7 @@ import {
 } from './kit-content.js';
 import { planLimits } from './plans.js';
 import { SOCIALS } from './socials.js';
+import { splitGames, boxArt } from './games.js';
 import { isReferralCode } from './referrals.js';
 
 const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
@@ -230,12 +231,14 @@ export function renderKit(user, connections, { origin, host, viewer, print, path
   const order = essential ? normalizeSections(parseJson(user.sections, [])) : normalizeSections([]);
   const body = order.filter((s) => s.visible).map((s) => sectionHtml[s.key]).join('\n    ');
 
-  const games = user.games
-    .split(',')
-    .map((g) => g.trim())
-    .filter(Boolean)
-    .slice(0, 12)
-    .map((g) => `<li>${e(g)}</li>`)
+  // Games Twitch knows get their box art; anything else stays a plain tag
+  const gameArt = parseJson(user.game_art, []);
+  const games = splitGames(user.games)
+    .map((text) => {
+      const game = gameArt.find((g) => g.text === text);
+      if (!game?.art) return `<li>${e(text)}</li>`;
+      return `<li class="game"><img src="${e(boxArt(game.art, 72, 96))}" srcset="${e(boxArt(game.art, 144, 192))} 2x" alt="" width="36" height="48" loading="lazy">${e(game.name)}</li>`;
+    })
     .join('');
 
   const updated = Math.max(0, ...Object.values(connections).map((c) => c.statsUpdatedAt || 0));

@@ -184,6 +184,8 @@ export const MIGRATIONS = [
     `ALTER TABLE users ADD COLUMN ${p}_avg_views INTEGER`,
     `ALTER TABLE users ADD COLUMN ${p}_engagement REAL`,
   ]),
+  // 8: Twitch box art matched to the games a creator lists
+  ['ALTER TABLE users ADD COLUMN game_art TEXT'],
 ];
 
 let ready = null;

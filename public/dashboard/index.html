@@ -262,10 +262,15 @@
         <textarea name="bio" maxlength="500" rows="4" placeholder="Who you are, what you play, and what your community is like."></textarea>
         <small><span id="bioCount">0</span>/500</small>
       </label>
-      <label>Games or topics you cover
-        <input type="text" name="games" maxlength="200" placeholder="e.g. Valorant, Arc Raiders, or budgeting, skincare, travel">
-        <small>Separate with commas.</small>
-      </label>
+      <div class="game-picker">
+        <label>Games or topics you cover
+          <input type="text" name="games" maxlength="200" placeholder="e.g. Valorant, Arc Raiders, or budgeting, skincare, travel"
+            autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="gameSuggestions" aria-expanded="false">
+          <small>Separate with commas. Start typing a game to pick it, and it shows on your kit with its box art. Anything else shows as a plain tag.</small>
+        </label>
+        <ul class="game-suggestions" id="gameSuggestions" role="listbox" aria-label="Game suggestions" hidden></ul>
+        <ul class="games game-preview" id="gamePreview" aria-label="How these look on your kit"></ul>
+      </div>
       <label>Business email
         <input type="email" name="contactEmail" maxlength="254" placeholder="you@example.com">
         <small>Shown as a "Work with me" button so brands can reach you.</small>

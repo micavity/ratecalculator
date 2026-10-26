@@ -61,7 +61,7 @@ export const USER_DATA_TABLES = ['kit_views', 'kit_sources', 'kit_countries', 'l
 
 // Profile fields copied from the merged-away profile when the kept one is empty
 const MERGE_FIELDS = [
-  'avatar_url', 'bio', 'games', 'contact_email', 'twitch_avg_viewers',
+  'avatar_url', 'bio', 'games', 'game_art', 'contact_email', 'twitch_avg_viewers',
   'tiktok_handle', 'tiktok_followers', 'tiktok_avg_views', 'tiktok_engagement',
   ...SOCIAL_COLUMNS,
 ];
@@ -277,6 +277,7 @@ export function profileFields(user) {
     avatarUrl: user.avatar_url,
     bio: user.bio,
     games: user.games,
+    gameArt: parseJson(user.game_art, []),
     contactEmail: user.contact_email,
     region: user.region,
     focus: user.focus,

@@ -19,10 +19,12 @@ import * as billing from './routes/billing.js';
 import * as referrals from './routes/referrals.js';
 import * as deals from './routes/deals.js';
 import * as plans from './routes/plans.js';
+import * as games from './routes/games.js';
 import { ensureSchema } from './lib/migrate.js';
 import { refreshStaleUsers } from './lib/users.js';
 import { pruneOldEvents } from './lib/analytics.js';
 import { takeSnapshots } from './lib/snapshots.js';
+import { backfillGameArt } from './lib/games.js';
 
 // [method, path pattern, handler]. ":name" matches one path segment.
 const ROUTES = [
@@ -45,6 +47,7 @@ const ROUTES = [
   ['PUT', '/api/deals/:id', deals.onRequestPut],
   ['DELETE', '/api/deals/:id', deals.onRequestDelete],
   ['GET', '/api/plans', plans.onRequestGet],
+  ['GET', '/api/games', games.onRequestGet],
   ['POST', '/api/stripe/webhook', billing.webhook],
   ['GET', '/api/referrals', referrals.onRequestGet],
   ['PUT', '/api/referrals', referrals.onRequestPut],
@@ -108,5 +111,6 @@ export default {
     ctx.waitUntil(refreshStaleUsers(env));
     ctx.waitUntil(pruneOldEvents(env));
     ctx.waitUntil(takeSnapshots(env).catch((err) => console.error('Snapshots failed:', err.message)));
+    ctx.waitUntil(backfillGameArt(env).catch((err) => console.error('Game art backfill failed:', err.message)));
   },
 };

@@ -2,6 +2,7 @@ import { json, sameOrigin } from '../lib/http.js';
 import { getSessionUser } from '../lib/session.js';
 import { validateProfile, updateProfile, applyPlanLimits } from '../lib/users.js';
 import { withVideoStats } from '../lib/video-stats.js';
+import { matchGames } from '../lib/games.js';
 import { parseJson } from '../lib/kit-content.js';
 
 export async function onRequestPut({ request, env }) {
@@ -33,6 +34,7 @@ export async function onRequestPut({ request, env }) {
     ...v,
   }));
   values.featured = JSON.stringify(await withVideoStats(env, featured));
+  values.game_art = JSON.stringify(await matchGames(env, values.games, parseJson(user.game_art, [])));
 
   try {
     await updateProfile(env, user.id, values);

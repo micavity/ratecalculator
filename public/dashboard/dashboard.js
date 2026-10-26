@@ -410,6 +410,146 @@ function renderOverview() {
   renderConnections();
 }
 
+// Games: suggestions with Twitch box art as the creator types
+
+const gamesInput = form.elements.games;
+const gameSuggestions = document.getElementById('gameSuggestions');
+const gamePreview = document.getElementById('gamePreview');
+const pickedGames = new Map();
+let gameSearchTimer = null;
+let gameSearchSeq = 0;
+let gameOptions = [];
+let gameActive = -1;
+
+function normName(text) {
+  return String(text).toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function boxArt(template, width, height) {
+  return template.replace('{width}', width).replace('{height}', height);
+}
+
+function gameEntries() {
+  return gamesInput.value.split(',').map((g) => g.trim()).filter(Boolean).slice(0, 12);
+}
+
+// Art we already know for a listed name: picked just now, or matched when last saved
+function knownArt(text) {
+  const saved = (state.profile.gameArt || []).find((g) => g.text === text);
+  return saved || pickedGames.get(normName(text)) || null;
+}
+
+function renderGamePreview() {
+  gamePreview.replaceChildren(...gameEntries().map((text) => {
+    const game = knownArt(text);
+    if (!game?.art) return el('li', { text });
+    return el('li', { class: 'game' }, [
+      el('img', { src: boxArt(game.art, 72, 96), alt: '', width: '36', height: '48' }),
+      document.createTextNode(game.name),
+    ]);
+  }));
+}
+
+// The comma-separated part of the box the cursor is in
+function currentSegment() {
+  const value = gamesInput.value;
+  const caret = gamesInput.selectionStart ?? value.length;
+  const start = value.lastIndexOf(',', caret - 1) + 1;
+  const comma = value.indexOf(',', caret);
+  const end = comma === -1 ? value.length : comma;
+  return { start, end, text: value.slice(start, end).trim() };
+}
+
+function hideGameSuggestions() {
+  gameSuggestions.hidden = true;
+  gameSuggestions.replaceChildren();
+  gamesInput.setAttribute('aria-expanded', 'false');
+  gameOptions = [];
+  gameActive = -1;
+}
+
+function pickGame(game) {
+  const { start, end } = currentSegment();
+  const value = gamesInput.value;
+  const before = value.slice(0, start).replace(/\s*$/, '');
+  const after = value.slice(end).replace(/^,?\s*/, '');
+  const prefix = before ? `${before} ` : '';
+  gamesInput.value = `${prefix}${game.name}, ${after}`;
+  const caret = prefix.length + game.name.length + 2;
+  gamesInput.setSelectionRange(caret, caret);
+  pickedGames.set(normName(game.name), game);
+  hideGameSuggestions();
+  renderGamePreview();
+  gamesInput.focus();
+}
+
+function highlightGame(index) {
+  gameActive = index;
+  [...gameSuggestions.children].forEach((li, i) => li.setAttribute('aria-selected', String(i === index)));
+}
+
+function showGameSuggestions(games) {
+  gameOptions = games;
+  gameActive = -1;
+  if (!games.length) {
+    hideGameSuggestions();
+    return;
+  }
+  gameSuggestions.replaceChildren(...games.map((game, i) => {
+    const li = el('li', { role: 'option', id: `game-option-${i}`, 'aria-selected': 'false' }, [
+      el('img', { src: boxArt(game.art, 52, 70), alt: '', width: '26', height: '35' }),
+      el('span', { text: game.name }),
+    ]);
+    // mousedown so the input doesn't lose focus first
+    li.addEventListener('mousedown', (event) => {
+      event.preventDefault();
+      pickGame(game);
+    });
+    return li;
+  }));
+  gameSuggestions.style.top = `${gamesInput.offsetTop + gamesInput.offsetHeight + 4}px`;
+  gameSuggestions.hidden = false;
+  gamesInput.setAttribute('aria-expanded', 'true');
+}
+
+gamesInput.addEventListener('input', () => {
+  renderGamePreview();
+  clearTimeout(gameSearchTimer);
+  const query = currentSegment().text;
+  if (query.length < 2) {
+    hideGameSuggestions();
+    return;
+  }
+  gameSearchTimer = setTimeout(async () => {
+    const seq = ++gameSearchSeq;
+    try {
+      const { games } = await api(`/api/games?q=${encodeURIComponent(query)}`);
+      if (seq === gameSearchSeq) showGameSuggestions(games);
+    } catch {
+      hideGameSuggestions();
+    }
+  }, 250);
+});
+
+gamesInput.addEventListener('keydown', (event) => {
+  if (gameSuggestions.hidden || !gameOptions.length) return;
+  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    event.preventDefault();
+    const step = event.key === 'ArrowDown' ? 1 : -1;
+    highlightGame((gameActive + step + gameOptions.length) % gameOptions.length);
+  } else if (event.key === 'Enter' && gameActive >= 0) {
+    event.preventDefault();
+    pickGame(gameOptions[gameActive]);
+  } else if (event.key === 'Escape') {
+    hideGameSuggestions();
+  }
+});
+
+gamesInput.addEventListener('blur', () => {
+  setTimeout(hideGameSuggestions, 150);
+  gamesInput.value = gamesInput.value.replace(/[,\s]+$/, '');
+});
+
 // Edit form
 
 const SPECIAL_FIELDS = new Set(['featured', 'theme', 'rateMode', 'useAccent', 'accentColor']);
@@ -675,6 +815,7 @@ function fillForm() {
   fillRows(packagesEditor, p.packages);
   renderSections(p.sections);
   document.getElementById('bioCount').textContent = form.elements.bio.value.length;
+  renderGamePreview();
 }
 
 function readForm() {
@@ -743,6 +884,7 @@ form.addEventListener('submit', async (event) => {
 
 form.elements.bio.addEventListener('input', () => {
   document.getElementById('bioCount').textContent = form.elements.bio.value.length;
+  renderGamePreview();
 });
 
 // Buttons
