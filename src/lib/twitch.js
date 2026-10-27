@@ -79,15 +79,40 @@ export async function getTwitchUser(env, token) {
 export async function getTwitchStats(env, token, broadcasterId) {
   const id = encodeURIComponent(broadcasterId);
   const since = new Date(Date.now() - 28 * 86400000).toISOString();
-  const [followers, clips] = await Promise.all([
+  const none = { data: [] };
+  const [followers, clips, users, vods] = await Promise.all([
     helix(env, token, `/channels/followers?broadcaster_id=${id}&first=1`),
-    helix(env, token, `/clips?broadcaster_id=${id}&started_at=${encodeURIComponent(since)}&first=6`)
-      .catch(() => ({ data: [] })),
+    helix(env, token, `/clips?broadcaster_id=${id}&started_at=${encodeURIComponent(since)}&first=6`).catch(() => none),
+    helix(env, token, `/users?id=${id}`).catch(() => none),
+    helix(env, token, `/videos?user_id=${id}&type=archive&first=20`).catch(() => none),
   ]);
   const topClips = (clips.data || [])
     .map((c) => ({ id: c.id, title: c.title || '', views: c.view_count ?? 0, publishedAt: c.created_at || null, url: c.url }))
     .sort((a, b) => b.views - a.views);
-  return { followers: followers.total ?? 0, topClips };
+  const user = users.data?.[0];
+  return { followers: followers.total ?? 0, topClips, ...pastStreamStats(vods.data || []), broadcasterType: user?.broadcaster_type || '', since: user?.created_at || null };
+}
+
+// "3h2m10s" → hours
+function durationHours(text) {
+  const m = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/.exec(text || '');
+  if (!m) return 0;
+  return (Number(m[1]) || 0) + (Number(m[2]) || 0) / 60 + (Number(m[3]) || 0) / 3600;
+}
+
+// Average views, length and how often they stream, from saved past
+// broadcasts. Twitch keeps these 7 to 60 days, so the window adapts.
+export function pastStreamStats(vods, now = Date.now()) {
+  if (!vods.length) return { avgVodViews: null, streamLengthHours: null, streamsPerWeek: null };
+  const avg = (list) => list.reduce((s, v) => s + v, 0) / list.length;
+  const recent = vods.filter((v) => now - Date.parse(v.created_at) <= 28 * 86400000);
+  const oldest = Math.min(...recent.map((v) => Date.parse(v.created_at)));
+  const weeks = recent.length ? Math.min(4, Math.max(1, (now - oldest) / (7 * 86400000))) : 1;
+  return {
+    avgVodViews: Math.round(avg(vods.map((v) => v.view_count || 0))),
+    streamLengthHours: Math.round(avg(vods.map((v) => durationHours(v.duration))) * 10) / 10 || null,
+    streamsPerWeek: recent.length ? Math.round((recent.length / weeks) * 10) / 10 : null,
+  };
 }
 
 // Public clip and VOD details, looked up by ID

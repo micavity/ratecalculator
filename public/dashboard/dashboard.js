@@ -854,26 +854,41 @@ function setPath(obj, path, value) {
   o[keys.at(-1)] = value;
 }
 
-// Essential: which stats show on the kit
-const STAT_TOGGLES = [
-  ['Twitch', [['twitch.followers', 'Followers'], ['twitch.avgViewers', 'Avg viewers']]],
-  ['YouTube', [['youtube.subscribers', 'Subscribers'], ['youtube.avgViews', 'Avg views / video'], ['youtube.avgShorts', 'Avg views / Short'], ['youtube.engagement', 'Engagement']]],
-  ...['TikTok', 'Instagram', 'Facebook', 'X'].map((name) => {
-    const key = name === 'X' ? 'x' : name.toLowerCase();
-    return [name, [[`${key}.followers`, 'Followers'], [`${key}.avgViews`, 'Avg views'], [`${key}.engagement`, 'Engagement']]];
-  }),
+// Which stats each kit card shows (matches src/lib/kit-stats.js). Free kits
+// show the defaults; Essential and up pick up to 6 per platform.
+const MAX_CARD_STATS = 6;
+const socialStats = (views) => [['followers', 'Followers'], ['avgViews', views], ['engagement', 'Engagement']];
+const STAT_CHOICES = [
+  ['twitch', 'Twitch', [['followers', 'Followers'], ['avgViewers', 'Avg viewers'], ['avgVodViews', 'Avg views / past stream'], ['streamsPerWeek', 'Streams per week'], ['streamLength', 'Avg stream length'], ['since', 'Streaming since']],
+    ['followers', 'avgViewers', 'avgVodViews', 'streamsPerWeek', 'streamLength', 'since']],
+  ['youtube', 'YouTube', [['subscribers', 'Subscribers'], ['avgViews', 'Avg views / video'], ['avgShorts', 'Avg views / Short'], ['engagement', 'Engagement'], ['totalViews', 'Total views'], ['uploadsPerMonth', 'Uploads per month'], ['avgLikes', 'Avg likes / video'], ['avgComments', 'Avg comments / video'], ['videoCount', 'Videos posted'], ['avgLiveViews', 'Avg live stream views'], ['since', 'Creating since']],
+    ['subscribers', 'avgViews', 'avgShorts', 'engagement', 'totalViews', 'uploadsPerMonth']],
+  ['tiktok', 'TikTok', socialStats('Avg views'), ['followers', 'avgViews', 'engagement']],
+  ['instagram', 'Instagram', socialStats('Avg Reel views'), ['followers', 'avgViews', 'engagement']],
+  ['facebook', 'Facebook', socialStats('Avg video views'), ['followers', 'avgViews', 'engagement']],
+  ['x', 'X', socialStats('Avg views per post'), ['followers', 'avgViews', 'engagement']],
 ];
 
-function renderStatToggles(hidden) {
-  document.getElementById('statToggles').replaceChildren(...STAT_TOGGLES.map(([platform, stats]) => el('fieldset', { class: 'stat-toggle-group' }, [
-    el('legend', { text: platform }),
-    ...stats.map(([key, label]) => {
-      const input = el('input', { type: 'checkbox', 'data-stat': key });
-      input.checked = !hidden.includes(key);
-      input.disabled = !state.limits.essential;
-      return el('label', { class: 'toggle' }, [input, document.createTextNode(label)]);
-    }),
-  ])));
+function renderStatToggles(chosen) {
+  const essential = state.limits.essential;
+  const picked = (platform, key, defaults) => (essential && chosen ? chosen.includes(`${platform}.${key}`) : defaults.includes(key));
+  document.getElementById('statToggles').replaceChildren(...STAT_CHOICES.map(([platform, name, stats, defaults]) => {
+    const counter = el('span', { class: 'small muted' });
+    const inputs = stats.map(([key, label]) => {
+      const input = el('input', { type: 'checkbox', 'data-stat': `${platform}.${key}` });
+      input.checked = picked(platform, key, defaults);
+      return [input, el('label', { class: 'toggle' }, [input, document.createTextNode(label)])];
+    });
+    // Up to 6 per platform: once 6 are ticked, the rest wait
+    const update = () => {
+      const count = inputs.filter(([i]) => i.checked).length;
+      counter.textContent = ` ${count} of ${Math.min(MAX_CARD_STATS, stats.length)}`;
+      inputs.forEach(([i]) => { i.disabled = !essential || (!i.checked && count >= MAX_CARD_STATS); });
+    };
+    inputs.forEach(([i]) => i.addEventListener('change', update));
+    update();
+    return el('fieldset', { class: 'stat-toggle-group' }, [el('legend', {}, [document.createTextNode(name), counter]), ...inputs.map(([, l]) => l)]);
+  }));
 }
 
 function fillForm() {
@@ -894,7 +909,7 @@ function fillForm() {
   fillRows(rateCardEditor, p.rateCard);
   fillRows(packagesEditor, p.packages);
   renderSections(p.sections);
-  renderStatToggles(p.hiddenStats || []);
+  renderStatToggles(p.shownStats);
   document.getElementById('bioCount').textContent = form.elements.bio.value.length;
   renderGamePreview();
 }
@@ -917,7 +932,7 @@ function readForm() {
   data.packages = readRows(packagesEditor);
   data.sections = readSections();
   data.accent = form.elements.useAccent.checked ? form.elements.accentColor.value : '';
-  data.hiddenStats = [...document.querySelectorAll('#statToggles input')].filter((i) => !i.checked).map((i) => i.dataset.stat);
+  data.shownStats = [...document.querySelectorAll('#statToggles input')].filter((i) => i.checked).map((i) => i.dataset.stat);
   return data;
 }
 

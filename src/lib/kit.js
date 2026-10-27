@@ -6,6 +6,7 @@ import {
 } from './kit-content.js';
 import { planLimits } from './plans.js';
 import { SOCIALS } from './socials.js';
+import { STAT_KEYS, chosenStats, cardStats } from './kit-stats.js';
 import { splitGames, boxArt } from './games.js';
 import { isReferralCode } from './referrals.js';
 
@@ -21,18 +22,19 @@ function stat(label, value, note) {
   return `<div class="stat"><span class="stat-value">${e(value)}</span><span class="stat-label">${e(label)}</span>${note ? `<span class="stat-note">${e(note)}</span>` : ''}</div>`;
 }
 
-// Stats an Essential creator chose to hide (shown again if their plan lapses)
+// Stats an Essential creator chose not to show (all shown again if their plan lapses)
 export function hiddenStats(user, essential) {
-  return new Set(essential ? parseJson(user.hidden_stats, []) : []);
+  const chosen = chosenStats(user, essential);
+  return new Set(chosen ? STAT_KEYS.filter((k) => !chosen.includes(k)) : []);
 }
 
-function platformCard(name, link, verified, stats) {
+function platformCard(name, link, verified, stats, status = '') {
   const body = stats.filter(Boolean).join('');
   if (!body) return '';
-  const badge = verified ? '<span class="badge" title="Stats pulled directly from the platform">✓ Verified</span>' : '';
+  const badge = `${status ? `<span class="badge partner-badge">${e(status)}</span>` : ''}${verified ? '<span class="badge" title="Stats pulled directly from the platform">✓ Verified</span>' : ''}`;
   const handle = link ? `<a href="${e(link.url)}" target="_blank" rel="noopener">${e(link.label)}</a>` : '';
   return `<section class="kit-card platform-card">
-    <header><h2>${e(name)}</h2>${badge}</header>
+    <header><h2>${e(name)}</h2>${badge ? `<span class="card-badges">${badge}</span>` : ''}</header>
     ${handle ? `<p class="handle">${handle}</p>` : ''}
     <div class="stats">${body}</div>
   </section>`;
@@ -207,33 +209,19 @@ export function renderKit(user, connections, { origin, host, viewer, print, path
   const tiktokUrl = user.tiktok_handle ? `https://www.tiktok.com/@${encodeURIComponent(user.tiktok_handle)}` : null;
   const yt = youtube?.stats || {};
 
-  // Essential creators can hide any stat; hidden ones also leave the follower total
+  // Each card shows up to 6 stats: the defaults on Free, the creator's picks on Essential and up
   const hidden = hiddenStats(user, essential);
-  const show = (key, value) => (hidden.has(key) ? null : value);
+  const chosen = chosenStats(user, essential);
+  const statsFor = (platform) => cardStats(platform, user, connections, chosen).map((s) => stat(s.label, s.value, s.note));
+  const twitchType = twitch?.stats.broadcasterType;
   const cards = [
-    platformCard('Twitch', twitch && { url: twitch.url, label: twitch.username }, Boolean(twitch), [
-      stat('Followers', show('twitch.followers', count(twitch?.stats.followers))),
-      stat('Avg viewers', show('twitch.avgViewers', count(user.twitch_avg_viewers)), 'Self-reported'),
-    ]),
-    platformCard('YouTube', youtube && { url: youtube.url, label: youtube.username }, Boolean(youtube), [
-      stat('Subscribers', show('youtube.subscribers', count(yt.subscribers))),
-      stat('Avg views / video', show('youtube.avgViews', count(yt.avgViews))),
-      stat('Avg views / Short', show('youtube.avgShorts', count(yt.avgShortsViews))),
-      stat('Engagement', show('youtube.engagement', yt.engagement != null ? `${yt.engagement}%` : null)),
-    ]),
-    platformCard('TikTok', tiktokUrl && { url: tiktokUrl, label: `@${user.tiktok_handle}` }, false, [
-      stat('Followers', show('tiktok.followers', count(user.tiktok_followers)), 'Self-reported'),
-      stat('Avg views', show('tiktok.avgViews', count(user.tiktok_avg_views)), 'Self-reported'),
-      stat('Engagement', show('tiktok.engagement', user.tiktok_engagement != null ? `${user.tiktok_engagement}%` : null), 'Self-reported'),
-    ]),
+    platformCard('Twitch', twitch && { url: twitch.url, label: twitch.username }, Boolean(twitch), statsFor('twitch'),
+      twitchType === 'partner' ? 'Twitch Partner' : twitchType === 'affiliate' ? 'Twitch Affiliate' : ''),
+    platformCard('YouTube', youtube && { url: youtube.url, label: youtube.username }, Boolean(youtube), statsFor('youtube')),
+    platformCard('TikTok', tiktokUrl && { url: tiktokUrl, label: `@${user.tiktok_handle}` }, false, statsFor('tiktok')),
     ...SOCIALS.map((s) => {
       const handle = user[`${s.key}_handle`];
-      const engagement = user[`${s.key}_engagement`];
-      return platformCard(s.name, handle && { url: s.url(handle), label: s.key === 'facebook' ? `facebook.com/${handle}` : `@${handle}` }, false, [
-        stat('Followers', show(`${s.key}.followers`, count(user[`${s.key}_followers`])), 'Self-reported'),
-        stat(s.viewsLabel, show(`${s.key}.avgViews`, count(user[`${s.key}_avg_views`])), 'Self-reported'),
-        stat('Engagement', show(`${s.key}.engagement`, engagement != null ? `${engagement}%` : null), 'Self-reported'),
-      ]);
+      return platformCard(s.name, handle && { url: s.url(handle), label: s.key === 'facebook' ? `facebook.com/${handle}` : `@${handle}` }, false, statsFor(s.key));
     }),
   ].join('');
 

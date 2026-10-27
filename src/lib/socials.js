@@ -31,14 +31,6 @@ export const SOCIALS = [
   },
 ];
 
-// Every stat a creator can hide from their kit (Essential)
-export const STAT_KEYS = [
-  'twitch.followers', 'twitch.avgViewers',
-  'youtube.subscribers', 'youtube.avgViews', 'youtube.avgShorts', 'youtube.engagement',
-  'tiktok.followers', 'tiktok.avgViews', 'tiktok.engagement',
-  ...SOCIALS.flatMap((s) => [`${s.key}.followers`, `${s.key}.avgViews`, `${s.key}.engagement`]),
-];
-
 export const SOCIAL_COLUMNS = SOCIALS.flatMap((s) => ['handle', 'followers', 'avg_views', 'engagement'].map((c) => `${s.key}_${c}`));
 
 // Accepts "@name", "name" or a pasted profile link like instagram.com/name/

@@ -1265,7 +1265,7 @@ html[data-kit-style="gradient"] body {
 
 .kit-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 400px), 1fr));
   gap: 16px;
   margin-bottom: 16px;
 }
@@ -1304,14 +1304,16 @@ html[data-kit-style="gradient"] body {
   white-space: nowrap;
 }
 
+/* Up to 6 stats, 3 to a row (2 on phones); a short last row stretches to fill */
 .stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
-/* An odd stat out (e.g. after hiding one) fills the row instead of leaving a gap */
-.stats .stat:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.stats .stat { flex: 1 1 calc((100% - 20px) / 3); min-width: 110px; }
+.card-badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.partner-badge { color: #9146ff; border-color: rgba(145, 70, 255, 0.5); }
 
 .stat {
   background: var(--panel-2);

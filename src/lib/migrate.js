@@ -325,6 +325,8 @@ export const MIGRATIONS = [
   ],
   // 15: Essential: stats the creator chose to hide from their kit
   ['ALTER TABLE users ADD COLUMN hidden_stats TEXT'],
+  // 16: Essential: which stats each kit card shows (up to 6 per platform)
+  ['ALTER TABLE users ADD COLUMN shown_stats TEXT'],
 ];
 
 let ready = null;
