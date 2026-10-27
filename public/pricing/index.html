@@ -33,7 +33,7 @@
       </div>
     </section>
 
-    <section class="price-cards price-cards-3">
+    <section class="price-cards price-cards-3 price-cards-4">
       <div class="price-card">
         <h2>Free</h2>
         <p class="price"><strong>$0</strong> forever</p>
@@ -94,6 +94,24 @@
         <p class="small muted soon-list-title">Coming to Pro:</p>
         <ul class="checks checks-soon">
           <li>Growth charts on your kit</li>
+        </ul>
+      </div>
+      <div class="price-card price-card-soon" id="ultraCard">
+        <span class="popular soon" id="ultraTag">Coming soon</span>
+        <h2>Ultra</h2>
+        <p class="price" data-price-month="$19.99" data-price-year="$199.99" data-per-month="/month" data-per-year="/year"><strong>$19.99</strong> <span>/month</span></p>
+        <p class="small muted yearly-note" hidden>That's about $16.67 a month, billed yearly.</p>
+        <p class="muted">For creators running sponsorships as a business.</p>
+        <button type="button" class="button-secondary" id="ultraButton" disabled>Coming soon</button>
+        <ul class="checks">
+          <li><strong>Everything in Pro, plus:</strong></li>
+          <li>★ Pro Creator badge on your kit</li>
+          <li>"Live now" badge on your kit when you're streaming</li>
+          <li>Your top videos of the last 28 days, featured automatically</li>
+          <li>Income and tax reports with spreadsheet export</li>
+          <li>"Book me" page with your open sponsorship dates</li>
+          <li>Automatic campaign reports with live views to send brands</li>
+          <li>Invite a manager to help run your deals</li>
         </ul>
       </div>
     </section>
@@ -171,6 +189,17 @@
       proButton.disabled = false;
       proButton.className = 'upgrade-button';
       proButton.textContent = 'Upgrade to Pro';
+    }).catch(() => {});
+
+    const ultraButton = document.getElementById('ultraButton');
+    ultraButton.addEventListener('click', () => upgrade('ultra'));
+    fetch('/api/plans').then((res) => res.json()).then((plans) => {
+      if (!plans.ultra) return;
+      document.getElementById('ultraCard').classList.remove('price-card-soon');
+      document.getElementById('ultraTag').remove();
+      ultraButton.disabled = false;
+      ultraButton.className = 'upgrade-button';
+      ultraButton.textContent = 'Upgrade to Ultra';
     }).catch(() => {});
   </script>
 </body>

@@ -144,10 +144,11 @@ export async function handleStripeEvent(env, event) {
 }
 
 // What the dashboard shows about a creator's subscription
-export function billingInfo(user, configured, proAvailable) {
+export function billingInfo(user, configured, proAvailable, ultraAvailable) {
   return {
     configured,
     proAvailable,
+    ultraAvailable,
     subscribed: Boolean(user.stripe_subscription_id && ACTIVE_STATUSES.has(user.subscription_status)),
     status: user.subscription_status || '',
     interval: user.subscription_interval,

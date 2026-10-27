@@ -560,6 +560,7 @@ const PLAN_PRICES = 'Essential is $4.99/month or $49.99/year';
 const PRICES = {
   essential: { name: 'Essential', month: '$4.99', year: '$49.99' },
   pro: { name: 'Pro', month: '$9.99', year: '$99.99' },
+  ultra: { name: 'Ultra', month: '$19.99', year: '$199.99' },
 };
 const GRACE_MS = 3 * 86400000;
 
@@ -609,6 +610,12 @@ function renderBilling() {
   if (billing.configured && billing.hasCustomer) actions.push(manageButton(billing.subscribed ? 'Manage subscription' : 'Billing & invoices'));
   if (!billing.subscribed && plan.source !== 'gift') actions.push(el('a', { class: 'button plan-button', href: '/pricing/', text: plan.plan === 'free' ? 'See plans' : 'Compare plans' }));
   if (actions.length) lines.push(el('div', { class: 'kit-link-actions' }, actions));
+  if (billing.ultraAvailable && !state.limits.ultra) {
+    lines.push(
+      el('p', { class: 'small' }, [el('strong', { text: 'Ultra: ' }), document.createTextNode('everything in Pro, plus a ★ Pro Creator badge, a "Live now" badge, your top videos featured automatically, income reports, a "Book me" page, campaign reports and manager access.')]),
+      el('div', { class: 'plan-actions' }, upgradeButtons('ultra')),
+    );
+  }
   if (billing.hasCustomer) {
     lines.push(el('p', { class: 'small muted' }, [
       document.createTextNode('Change your plan, update your card, cancel, or download invoices. Payments are handled securely by Stripe. You can also '),
@@ -2468,7 +2475,7 @@ async function init() {
     sessionStorage.removeItem('cgg_upgrade');
   } catch {}
   if (pendingUpgrade) continueUpgrade(pendingUpgrade);
-  const upgradedTo = justUpgraded === 'pro' ? 'pro' : 'essential';
+  const upgradedTo = ['pro', 'ultra'].includes(justUpgraded) ? justUpgraded : 'essential';
   if (justUpgraded && !state.limits[upgradedTo]) waitForUpgrade(upgradedTo);
   else if (justUpgraded) showBanner(`Welcome to ${PRICES[upgradedTo].name}! Everything is unlocked.`, 'success');
 }
@@ -2476,15 +2483,15 @@ async function init() {
 // The pricing page saves "plan:interval" (older pages saved just the interval)
 function continueUpgrade(choice) {
   const [first, second] = choice.split(':');
-  const plan = second ? (first === 'pro' ? 'pro' : 'essential') : 'essential';
+  const plan = second && ['pro', 'ultra'].includes(first) ? first : 'essential';
   const interval = (second || first) === 'year' ? 'year' : 'month';
   const name = PRICES[plan].name;
   if (state.limits[plan]) {
     showBanner(`You're already on ${name}.`, 'info');
-  } else if (plan === 'pro' && !state.billing.proAvailable) {
-    showBanner("Pro isn't available yet.", 'info');
+  } else if ((plan === 'pro' && !state.billing.proAvailable) || (plan === 'ultra' && !state.billing.ultraAvailable)) {
+    showBanner(`${name} isn't available yet.`, 'info');
   } else if (state.billing.subscribed) {
-    showTab(plan === 'pro' ? 'deals' : 'overview');
+    showTab(plan === 'essential' ? 'overview' : 'deals');
     showBanner(`To move to ${name}, use the "Switch to ${name}" button below.`, 'info');
   } else if (state.billing.configured) {
     goToStripe('/api/billing/checkout', { plan, interval }, el('button'));

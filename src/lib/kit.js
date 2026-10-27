@@ -277,7 +277,7 @@ export function renderKit(user, connections, { origin, host, viewer, print, path
     <section class="kit-hero">
       ${avatar}
       <div class="kit-intro">
-        <h1>${e(user.display_name)}</h1>
+        <h1>${e(user.display_name)}${limits.ultra ? ' <span class="pro-creator" title="Runs sponsorships professionally on CreatorGG Ultra">★ Pro Creator</span>' : ''}</h1>
         ${user.bio ? `<p class="bio">${e(user.bio)}</p>` : ''}
         ${games ? `<ul class="games" aria-label="Games and topics">${games}</ul>` : ''}
         ${contact}

@@ -1,6 +1,6 @@
 import { json, sameOrigin } from '../lib/http.js';
 import { getSessionUser } from '../lib/session.js';
-import { stripe, stripeConfigured, proConfigured, priceFor, verifyWebhook } from '../lib/stripe.js';
+import { stripe, stripeConfigured, planConfigured, priceFor, planForPrice, verifyWebhook } from '../lib/stripe.js';
 import { handleStripeEvent, syncSubscription } from '../lib/billing.js';
 import { ensurePromotionCode } from '../lib/referrals.js';
 import { PLAN_NAMES, PLAN_RANK, activeGift } from '../lib/plans.js';
@@ -26,11 +26,13 @@ async function ensureCustomer(env, user) {
 const ACTIVE = ['active', 'trialing', 'past_due'];
 
 function requestedPlan(env, body) {
-  if (body.plan === 'pro') return proConfigured(env) ? { plan: 'pro' } : { error: "Pro isn't available yet." };
+  if (body.plan === 'pro' || body.plan === 'ultra') {
+    return planConfigured(env, body.plan) ? { plan: body.plan } : { error: `${PLAN_NAMES[body.plan]} isn't available yet.` };
+  }
   return { plan: 'essential' };
 }
 
-// Starts Stripe Checkout: { plan: 'essential' | 'pro', interval: 'month' | 'year' }
+// Starts Stripe Checkout: { plan: 'essential' | 'pro' | 'ultra', interval: 'month' | 'year' }
 export async function checkout({ request, env }) {
   const { user, response } = await signedIn(request, env);
   if (response) return response;
@@ -77,7 +79,7 @@ export async function checkout({ request, env }) {
 }
 
 // Moves an existing subscription to another plan, keeping its billing
-// period: { plan: 'essential' | 'pro' }. Upgrades charge the difference
+// period: { plan: 'essential' | 'pro' | 'ultra' }. Upgrades charge the difference
 // for the rest of the period right away, and only take effect once paid.
 export async function changePlan({ request, env }) {
   const { user, response } = await signedIn(request, env);
@@ -94,7 +96,7 @@ export async function changePlan({ request, env }) {
   const price = priceFor(env, plan, item?.price?.recurring?.interval === 'year' ? 'year' : 'month');
   if (!item || item.price?.id === price) return json({ error: `You're already on ${PLAN_NAMES[plan]}.` }, 409);
 
-  const upgrade = plan === 'pro';
+  const upgrade = PLAN_RANK[plan] > PLAN_RANK[planForPrice(env, item.price?.id)];
   let updated;
   try {
     updated = await stripe(env, 'POST', `subscriptions/${current.id}`, {

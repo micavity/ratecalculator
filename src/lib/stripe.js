@@ -7,19 +7,35 @@ export function stripeConfigured(env) {
   return Boolean(env.STRIPE_SECRET_KEY && env.STRIPE_PRICE_MONTHLY && env.STRIPE_PRICE_YEARLY);
 }
 
-// Pro goes on sale once its prices are added to wrangler.toml
+// Each paid plan's Stripe prices. Pro and Ultra go on sale once their
+// prices are added to wrangler.toml.
+function prices(env, plan) {
+  if (plan === 'ultra') return { month: env.STRIPE_PRICE_ULTRA_MONTHLY, year: env.STRIPE_PRICE_ULTRA_YEARLY };
+  if (plan === 'pro') return { month: env.STRIPE_PRICE_PRO_MONTHLY, year: env.STRIPE_PRICE_PRO_YEARLY };
+  return { month: env.STRIPE_PRICE_MONTHLY, year: env.STRIPE_PRICE_YEARLY };
+}
+
+export function planConfigured(env, plan) {
+  const p = prices(env, plan);
+  return stripeConfigured(env) && Boolean(p.month && p.year);
+}
+
 export function proConfigured(env) {
-  return stripeConfigured(env) && Boolean(env.STRIPE_PRICE_PRO_MONTHLY && env.STRIPE_PRICE_PRO_YEARLY);
+  return planConfigured(env, 'pro');
 }
 
 export function priceFor(env, plan, interval) {
-  if (plan === 'pro') return interval === 'year' ? env.STRIPE_PRICE_PRO_YEARLY : env.STRIPE_PRICE_PRO_MONTHLY;
-  return interval === 'year' ? env.STRIPE_PRICE_YEARLY : env.STRIPE_PRICE_MONTHLY;
+  return prices(env, plan)[interval === 'year' ? 'year' : 'month'];
 }
 
 // Which plan a Stripe price belongs to. Anything unknown counts as Essential.
 export function planForPrice(env, priceId) {
-  return priceId && (priceId === env.STRIPE_PRICE_PRO_MONTHLY || priceId === env.STRIPE_PRICE_PRO_YEARLY) ? 'pro' : 'essential';
+  if (!priceId) return 'essential';
+  for (const plan of ['ultra', 'pro']) {
+    const p = prices(env, plan);
+    if (priceId === p.month || priceId === p.year) return plan;
+  }
+  return 'essential';
 }
 
 // Stripe takes form-encoded bodies with nested keys like line_items[0][price]

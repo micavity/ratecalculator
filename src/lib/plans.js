@@ -19,9 +19,11 @@ export function hasPlan(user, needed) {
 export function planLimits(user) {
   const essential = hasPlan(user, 'essential');
   const pro = hasPlan(user, 'pro');
+  const ultra = hasPlan(user, 'ultra');
   return {
     essential,
     pro,
+    ultra,
     deals: pro ? 500 : 0,
     featured: essential ? 6 : 3,
     versions: essential ? 2 : 0,
