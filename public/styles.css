@@ -1310,6 +1310,9 @@ html[data-kit-style="gradient"] body {
   gap: 10px;
 }
 
+/* An odd stat out (e.g. after hiding one) fills the row instead of leaving a gap */
+.stats .stat:last-child:nth-child(odd) { grid-column: 1 / -1; }
+
 .stat {
   background: var(--panel-2);
   border-radius: 10px;
