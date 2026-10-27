@@ -96,7 +96,7 @@ Free media kits and sponsorship rate estimates for creators. Built for gaming cr
 - **Deal tracker (Pro):** Deals tab with stages (Pitched → Negotiating → Agreed → Delivered → Paid, or Lost), amounts in 15 currencies, deliverables, content and payment due dates with overdue alerts, totals (earned this month, owed, pipeline), brand autofill from earlier deals and the kit's brand list, brand logos, and "Start a deal" from tracked links (deals show when the brand opens the kit). Deals are kept, hidden, if Pro lapses, and move over when profiles merge.
 
 ### Waiting on / to do outside the code
-- [ ] **Google verification** of the `youtube.readonly` scope (submitted). Until approved, YouTube sign-in shows "Google hasn't verified this app" and is capped at 100 users. **Don't launch widely until this is approved.**
+- [x] **Google verification** of the `youtube.readonly` scope: **approved October 2026** (project creatorgg-512801). Don't change the OAuth consent screen or add scopes without expecting a new review. YouTube API quota is 10,000 units a day (a stats refresh costs about 3); request more in Google Cloud if usage grows.
 - [ ] **UK broadband filters** block the new domain for some people (a UK friend couldn't open `creatorgg.com` but could open the workers.dev address). Submit `creatorgg.com` for categorization at Cisco Talos, Fortinet and Palo Alto Networks, and report it to Sky, BT, Virgin Media and TalkTalk. Usually clears up as the domain ages.
 - [ ] Turn on **Always Use HTTPS** (Cloudflare → creatorgg.com → SSL/TLS → Edge Certificates).
 - [ ] Add **`www.creatorgg.com`** as a second custom domain on the Worker.
