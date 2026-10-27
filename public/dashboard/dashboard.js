@@ -144,6 +144,7 @@ function rateInput() {
     ytEngagement: yt.engagement,
     ttViews: p.tiktokAvgViews,
     ttEngagement: p.tiktokEngagement,
+    seasonalBoost: state.seasonalBoost || 0,
     ...Object.fromEntries(SOCIALS.flatMap((s) => [
       [`${s.rateKey}Followers`, p[`${s.key}Followers`]],
       [`${s.rateKey}Views`, p[`${s.key}AvgViews`]],
@@ -1492,6 +1493,9 @@ function dealBadges(d) {
     badges.push([dueText('Payment', d.paymentDue), daysUntil(d.paymentDue) < 0 ? 'deal-badge-warning' : '']);
   }
   if (d.stage === 'paid' && d.paidOn) badges.push([`Paid ${shortDate(d.paidOn)}`, 'deal-badge-good']);
+  if (d.stage === 'paid' && d.amount !== null && state.limits.ultra && state.business?.taxRate) {
+    badges.push([`Set aside ${formatMoney(Math.round(d.amount * state.business.taxRate) / 100, d.currency)} for taxes`, '']);
+  }
   if (d.proposal && ['pitched', 'negotiating', 'agreed'].includes(d.stage)) {
     const [label, kind] = proposalState(d.proposal);
     badges.push([`Proposal: ${label.toLowerCase()}`, kind]);
@@ -1666,6 +1670,7 @@ async function loadDeals() {
     loadReports();
     setupPitches();
     renderIncome();
+    renderBusiness();
     loadBooking();
     return;
   }
@@ -1675,7 +1680,8 @@ async function loadDeals() {
   renderDeals();
   renderBrandSuggestions();
   setupPitches();
-  renderIncome();
+  await renderIncome();
+  renderBusiness();
   loadBooking();
 }
 
@@ -2553,7 +2559,18 @@ function exportIncome(year) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function renderIncome() {
+// The year's expenses, cached so switching tabs doesn't refetch
+let expenseCache = { year: null, list: [] };
+
+async function yearExpenses(year) {
+  if (expenseCache.year !== year) {
+    const data = await api(`/api/expenses?year=${year}`).catch(() => ({ expenses: [] }));
+    expenseCache = { year, list: data.expenses || [] };
+  }
+  return expenseCache.list;
+}
+
+async function renderIncome() {
   const locked = !state.limits.ultra;
   incomePanel.classList.toggle('locked', locked);
   incomeYear.hidden = locked;
@@ -2570,6 +2587,7 @@ function renderIncome() {
   incomeYear.replaceChildren(...years.map((y) => el('option', { value: String(y), text: String(y) })));
   incomeYear.value = String(years.includes(selected) ? selected : thisYear);
   const year = Number(incomeYear.value);
+  const expenses = await yearExpenses(year);
 
   const paid = paidDeals(year);
   const owed = deals.filter((d) => ['agreed', 'delivered'].includes(d.stage));
@@ -2577,10 +2595,19 @@ function renderIncome() {
   const inMain = paid.filter((d) => d.currency === currency);
   const otherCurrencies = paid.filter((d) => d.currency !== currency);
   const card = (value, label) => el('div', { class: 'stat' }, [el('span', { class: 'stat-value', text: value }), el('span', { class: 'stat-label', text: label })]);
+  // Profit and tax set-aside, in the main currency
+  const earnedMain = inMain.reduce((s, d) => s + d.amount, 0);
+  const spentMain = expenses.filter((x) => x.currency === currency).reduce((s, x) => s + x.amount, 0);
+  const taxRate = state.business?.taxRate;
+  const businessCards = [
+    card(expenses.length ? moneyTotal(expenses) : '–', `Expenses in ${year}`),
+    card(formatMoney(Math.round((earnedMain - spentMain) * 100) / 100, currency), otherCurrencies.length ? `Profit (${currency})` : 'Profit'),
+    taxRate ? card(formatMoney(Math.round(earnedMain * taxRate) / 100, currency), `Set aside for taxes (${taxRate}%)`) : '',
+  ];
 
   if (!paid.length) {
     incomeBody.replaceChildren(
-      el('div', { class: 'view-stats deal-stats' }, [card('–', `Earned in ${year}`), card(moneyTotal(owed), 'Still owed to you')]),
+      el('div', { class: 'view-stats deal-stats' }, [card('–', `Earned in ${year}`), card(moneyTotal(owed), 'Still owed to you'), ...businessCards]),
       el('p', { class: 'small muted', text: `No paid deals in ${year} yet. Mark deals as Paid (or mark their invoices paid) and they'll show up here.` }),
     );
     return;
@@ -2607,6 +2634,7 @@ function renderIncome() {
       card(String(paid.length), paid.length === 1 ? 'Paid deal' : 'Paid deals'),
       card(formatMoney(Math.round(inMain.reduce((s, d) => s + d.amount, 0) / Math.max(1, inMain.length)), currency), otherCurrencies.length ? `Average deal (${currency})` : 'Average deal'),
       card(moneyTotal(owed), 'Still owed to you'),
+      ...businessCards,
     ]),
     el('h3', { class: 'rates-heading', text: `By month${otherCurrencies.length ? ` (${currency} only)` : ''}` }),
     chart,
@@ -2621,7 +2649,126 @@ function renderIncome() {
   );
 }
 
-incomeYear.addEventListener('change', renderIncome);
+incomeYear.addEventListener('change', async () => {
+  await renderIncome();
+  renderBusiness();
+});
+
+// Business tools (Ultra): expenses, tax set-aside and seasonal pricing
+
+const businessPanel = document.getElementById('businessPanel');
+const businessBody = document.getElementById('businessBody');
+
+async function saveBusiness(settings, status) {
+  try {
+    await api('/api/business', { method: 'PUT', body: JSON.stringify(settings) });
+    state.business = settings;
+    state.seasonalBoost = state.limits.ultra ? settings.seasonal[new Date().getUTCMonth()] || 0 : 0;
+    status.textContent = 'Saved';
+    status.className = 'save-status ok';
+    renderIncome();
+    renderDeals();
+    renderRates();
+  } catch (err) {
+    status.textContent = err.message;
+    status.className = 'save-status error';
+  }
+}
+
+function exportExpenses(year, list) {
+  const rows = [['Date', 'Category', 'Description', 'Amount', 'Currency']];
+  for (const x of [...list].sort((a, b) => a.day.localeCompare(b.day))) rows.push([x.day, x.category, x.description, x.amount.toFixed(2), x.currency]);
+  const blob = new Blob([`${rows.map((r) => r.map(csvCell).join(',')).join('\n')}\n`], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  download(url, `creatorgg-expenses-${year}.csv`);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function renderBusiness() {
+  businessPanel.classList.toggle('locked', !state.limits.ultra);
+  if (!state.limits.ultra) {
+    businessBody.replaceChildren(el('div', { class: 'teaser' }, [
+      el('p', { text: 'Ultra adds business tools: track expenses so your income report shows profit, see how much to set aside for taxes on every deal, and raise your estimated rates automatically in busy months like Q4.' }),
+    ]));
+    return;
+  }
+  const settings = state.business || { taxRate: null, seasonal: Array(12).fill(0) };
+  const year = Number(incomeYear.value) || new Date().getFullYear();
+  const list = await yearExpenses(year);
+  const categories = ['Gear', 'Software and subscriptions', 'Editing and freelancers', 'Travel', 'Marketing', 'Other'];
+
+  // Tax set-aside
+  const taxInput = el('input', { type: 'number', min: '0', max: '80', step: '0.5', inputmode: 'decimal', placeholder: 'e.g. 25', 'aria-label': 'Tax set-aside percentage' });
+  taxInput.value = settings.taxRate ?? '';
+  const taxStatus = el('span', { class: 'save-status', role: 'status' });
+  const taxSave = el('button', { type: 'button', class: 'button-secondary', text: 'Save' });
+
+  // Seasonal pricing: one percentage per month
+  const monthInputs = MONTHS.map((m, i) => {
+    const input = el('input', { type: 'number', min: '-50', max: '100', step: '5', 'aria-label': `${m} rate change %` });
+    input.value = settings.seasonal[i] || '';
+    return input;
+  });
+  const seasonalStatus = el('span', { class: 'save-status', role: 'status' });
+  const readSettings = () => ({ taxRate: taxInput.value === '' ? null : Number(taxInput.value), seasonal: monthInputs.map((i) => Number(i.value) || 0) });
+  taxSave.addEventListener('click', () => saveBusiness(readSettings(), taxStatus));
+  const seasonalSave = el('button', { type: 'button', class: 'button-secondary', text: 'Save' });
+  seasonalSave.addEventListener('click', () => saveBusiness(readSettings(), seasonalStatus));
+  const q4 = el('button', { type: 'button', class: 'button-link', text: 'Q4 boost: +20% Oct–Dec' });
+  q4.addEventListener('click', () => { [9, 10, 11].forEach((i) => { monthInputs[i].value = 20; }); });
+  const clear = el('button', { type: 'button', class: 'button-link', text: 'Clear' });
+  clear.addEventListener('click', () => { monthInputs.forEach((i) => { i.value = ''; }); });
+
+  // Expenses
+  const day = el('input', { type: 'date', 'aria-label': 'Date' });
+  day.value = isoDay();
+  const category = el('select', { 'aria-label': 'Category' }, categories.map((c) => el('option', { value: c, text: c })));
+  const description = el('input', { type: 'text', maxlength: '120', placeholder: 'e.g. New microphone', 'aria-label': 'What it was' });
+  const amount = el('input', { type: 'number', min: '0', step: '0.01', inputmode: 'decimal', placeholder: 'Amount', 'aria-label': 'Amount' });
+  const currency = el('select', { 'aria-label': 'Currency' }, dealCurrencies.map((c) => el('option', { value: c, text: c })));
+  const add = el('button', { type: 'button', text: 'Add expense' });
+  add.addEventListener('click', async () => {
+    try {
+      await api('/api/expenses', { method: 'POST', body: JSON.stringify({ day: day.value, category: category.value, description: description.value, amount: amount.value, currency: currency.value }) });
+      expenseCache.year = null;
+      await renderIncome();
+      renderBusiness();
+    } catch (err) {
+      showBanner(err.message);
+    }
+  });
+  const rows = list.map((x) => {
+    const remove = el('button', { type: 'button', class: 'button-link', text: 'Delete' });
+    remove.addEventListener('click', async () => {
+      await api(`/api/expenses/${x.id}`, { method: 'DELETE' }).catch((err) => showBanner(err.message));
+      expenseCache.year = null;
+      await renderIncome();
+      renderBusiness();
+    });
+    return el('div', { class: 'expense-row' }, [
+      el('span', { class: 'small muted', text: shortDate(x.day) }),
+      el('span', {}, [el('strong', { text: x.description }), el('span', { class: 'small muted', text: ` · ${x.category}` })]),
+      el('span', { class: 'expense-amount', text: formatMoney(x.amount, x.currency) }),
+      remove,
+    ]);
+  });
+  const csv = el('button', { type: 'button', class: 'button-secondary', text: `Download ${year} expenses (CSV)` });
+  csv.addEventListener('click', () => exportExpenses(year, list));
+
+  businessBody.replaceChildren(
+    el('h3', { class: 'rates-heading', text: 'Tax set-aside' }),
+    el('p', { class: 'small muted', text: 'Pick a percentage and every paid deal shows how much to put aside, with a total in your income report. A common starting point is 25–30%, but check with an accountant. Not tax advice.' }),
+    el('div', { class: 'inline-form' }, [el('span', { class: 'prefixed' }, [taxInput, el('span', { class: 'suffix', text: '%' })]), taxSave, taxStatus]),
+    el('h3', { class: 'rates-heading', text: 'Seasonal pricing' }),
+    el('p', { class: 'small muted', text: 'Raise (or lower) your estimated rates in certain months. Brands spend the most in Q4. Applies to estimated rates on your kit, dashboard and rate check, not to rates you set yourself.' }),
+    el('div', { class: 'month-inputs' }, MONTHS.map((m, i) => el('label', {}, [document.createTextNode(m), monthInputs[i]]))),
+    el('div', { class: 'actions' }, [q4, clear, seasonalSave, seasonalStatus]),
+    el('h3', { class: 'rates-heading', text: `Expenses ${year}` }),
+    el('div', { class: 'expense-add' }, [day, category, amount, currency, description, add]),
+    rows.length ? el('div', { class: 'expense-list' }, rows) : el('p', { class: 'small muted', text: 'No expenses yet. Add gear, software, editors and travel so your income report shows profit.' }),
+    el('div', { class: 'actions' }, [csv]),
+  );
+}
 
 // Pitch templates (Pro): emails filled in from the creator's own stats
 

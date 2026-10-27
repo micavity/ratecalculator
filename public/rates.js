@@ -100,8 +100,10 @@ export function formatRange([low, high]) {
  */
 export function estimateRates(input) {
   const platforms = input.platforms || [];
+  // seasonalBoost: Ultra creators can raise rates in busy months, e.g. 20 for +20%
+  const boost = 1 + Math.max(-50, Math.min(100, Number(input.seasonalBoost) || 0)) / 100;
   const base = (REGION_MULTIPLIER[input.region] ?? REGION_MULTIPLIER.mixed)
-    * (FOCUS_MULTIPLIER[input.focus] ?? FOCUS_MULTIPLIER.gaming);
+    * (FOCUS_MULTIPLIER[input.focus] ?? FOCUS_MULTIPLIER.gaming) * boost;
   const sections = [];
   const bundleParts = [];
 

@@ -327,6 +327,21 @@ export const MIGRATIONS = [
   ['ALTER TABLE users ADD COLUMN hidden_stats TEXT'],
   // 16: Essential: which stats each kit card shows (up to 6 per platform)
   ['ALTER TABLE users ADD COLUMN shown_stats TEXT'],
+  // 17: Ultra business tools: expenses, tax set-aside and seasonal pricing
+  [
+    'ALTER TABLE users ADD COLUMN business TEXT',
+    `CREATE TABLE IF NOT EXISTS expenses (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      day TEXT NOT NULL,
+      category TEXT NOT NULL,
+      description TEXT NOT NULL,
+      amount_cents INTEGER NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      created_at INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS expenses_user ON expenses (user_id, day)',
+  ],
 ];
 
 let ready = null;

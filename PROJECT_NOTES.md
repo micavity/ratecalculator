@@ -82,6 +82,7 @@ Free media kits and sponsorship rate estimates for creators. Built for gaming cr
 - **Pro plan setup:** Pro checkout, "Switch to Pro" for Essential subscribers (charges the difference now, same renewal date), gifts remembered so they come back when a paid plan ends, Pro card on `/pricing/` that switches on by itself once Pro's prices are set
 - **Kit stats:** each platform card shows up to 6 stats, 3 per row (`src/lib/kit-stats.js`). Free shows the defaults (YouTube: subscribers, avg views, avg Short views, engagement, total views, uploads per month; Twitch: followers, avg viewers, avg views per past stream, streams per week, avg stream length, streaming since), topped up when one has no data. Essential and up pick any 6 per platform (`shown_stats`), including avg likes/comments, videos posted, live stream views and channel age; old `hidden_stats` choices carry over. Twitch Partner/Affiliate badge on the Twitch card. Stats not shown leave the follower total and proposals.
 - **Essential extras:** the stat picker above, and the "First pitch" template (the other 4 need Pro).
+- **Ultra business tools** (Deals tab, `src/lib/business.js`, `src/routes/business.js`): expense tracker (`expenses` table, yearly CSV) so the income report shows expenses and profit; tax set-aside % (badge on each paid deal, yearly total); seasonal pricing (a % per month, applied to estimated rates via `seasonalBoost` in `rateInput`, kit says "Peak season rates").
 - **Monthly reports** (Reports tab, `src/lib/monthly.js`, `/api/monthly?month=YYYY-MM`): Growth (all plans), Kit and brand interest (Essential+), Business summary (Pro+), Pipeline and money health, Sponsor performance, Rate check and a brand-facing update page at `/update/<slug>/<YYYY-MM>` (Ultra). Last 12 months back to sign-up; PDF via print, CSV for summary and pipeline. YouTube growth only covers the last 30 days (snapshot rule).
 - **Ultra plan:** live at $19.99/mo and $199.99/yr (prices in `wrangler.toml`). Upgrades from Pro charge the difference; downgrades credit.
 - **Ultra features:** ★ Pro Creator badge on kits; "Live now on Twitch" badge (Twitch API, cached 2 minutes); auto-featured top YouTube videos and Twitch clips of the last 28 days (pinned videos first); income report with CSV export (from paid deals); Book me page at `/book/<slug>` (requests become Negotiating deals, 20 a day max, honeypot); campaign reports at `/r/<id>` with live stats (refresh on view after 6 hours and from the cron so YouTube data stays under 30 days).
@@ -116,11 +117,6 @@ Free media kits and sponsorship rate estimates for creators. Built for gaming cr
 7. **Growth:** guides for search traffic ("what to charge for a sponsored stream", pitch templates).
 
 ## Ultra ideas shortlist (liked, not built yet)
-
-Running the business:
-- **Expense tracker:** log gear, software, editors, travel; income report shows profit; yearly CSV for taxes.
-- **Tax set-aside helper:** pick a % and each paid deal shows how much to set aside, with a yearly total (labeled "not tax advice").
-- **Seasonal pricing:** automatically raise estimated rates in busy months (e.g. +20% in Q4).
 
 Working with brands (pick from):
 - **Content approval:** brand approves or requests changes on a draft (script, video, thumbnail), like proposals.

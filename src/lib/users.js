@@ -9,6 +9,7 @@ import { withVideoStats } from './video-stats.js';
 import { PLAN_RANK, effectivePlan, planLimits } from './plans.js';
 import { SOCIALS, SOCIAL_COLUMNS, cleanHandle } from './socials.js';
 import { chosenStats, readChosenStats } from './kit-stats.js';
+import { seasonalBoost } from './business.js';
 
 // Paths that can't be used as media kit links
 export const RESERVED_SLUGS = new Set([
@@ -58,12 +59,12 @@ function saveConnection(env, userId, provider, account, stats) {
 }
 
 // Per-creator tables, besides users, connections and sessions
-export const USER_DATA_TABLES = ['kit_views', 'kit_sources', 'kit_countries', 'link_events', 'tracked_links', 'kit_versions', 'stat_snapshots', 'deals', 'invoices', 'proposals', 'booking_slots', 'campaign_reports'];
+export const USER_DATA_TABLES = ['kit_views', 'kit_sources', 'kit_countries', 'link_events', 'tracked_links', 'kit_versions', 'stat_snapshots', 'deals', 'invoices', 'proposals', 'booking_slots', 'campaign_reports', 'expenses'];
 
 // Profile fields copied from the merged-away profile when the kept one is empty
 const MERGE_FIELDS = [
   'avatar_url', 'bio', 'games', 'game_art', 'contact_email', 'twitch_avg_viewers', 'invoice_settings',
-  'booking', 'tiktok_handle', 'tiktok_followers', 'tiktok_avg_views', 'tiktok_engagement',
+  'booking', 'business', 'tiktok_handle', 'tiktok_followers', 'tiktok_avg_views', 'tiktok_engagement',
   ...SOCIAL_COLUMNS,
 ];
 
@@ -133,6 +134,7 @@ async function mergeUsers(env, aId, bId, provider, account, stats) {
   statements.push(env.DB.prepare('UPDATE proposals SET user_id = ? WHERE user_id = ?').bind(keep.id, drop.id));
   statements.push(env.DB.prepare('UPDATE booking_slots SET user_id = ? WHERE user_id = ?').bind(keep.id, drop.id));
   statements.push(env.DB.prepare('UPDATE campaign_reports SET user_id = ? WHERE user_id = ?').bind(keep.id, drop.id));
+  statements.push(env.DB.prepare('UPDATE expenses SET user_id = ? WHERE user_id = ?').bind(keep.id, drop.id));
   // A manager follows the kept profile, unless it already has one
   statements.push(env.DB.prepare('UPDATE OR IGNORE team_members SET creator_id = ? WHERE creator_id = ? AND NOT EXISTS (SELECT 1 FROM team_members WHERE creator_id = ?)').bind(keep.id, drop.id, keep.id));
   statements.push(env.DB.prepare('UPDATE manager_sessions SET creator_id = ? WHERE creator_id = ?').bind(keep.id, drop.id));
@@ -473,6 +475,7 @@ export function rateInput(user, connections) {
   const yt = connections.youtube?.stats || {};
   return {
     platforms,
+    seasonalBoost: seasonalBoost(user),
     region: user.region,
     focus: user.focus,
     twitchViewers: user.twitch_avg_viewers,

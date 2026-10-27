@@ -7,6 +7,7 @@ import {
 import { planLimits } from './plans.js';
 import { SOCIALS } from './socials.js';
 import { STAT_KEYS, chosenStats, cardStats } from './kit-stats.js';
+import { seasonalBoost } from './business.js';
 import { splitGames, boxArt } from './games.js';
 import { isReferralCode } from './referrals.js';
 
@@ -179,7 +180,8 @@ function estimatedRatesSection(user, connections) {
   if (!sections.length) return '';
   const rows = sections.map((s) => `<h3>${e(s.name)}</h3>${s.rates.map(([label, range]) => `<div class="rate"><span>${e(label)}</span><span class="amount">${e(formatRange(range))}</span></div>`).join('')}`).join('');
   const bundleRow = bundle ? `<h3>Bundle</h3><div class="rate bundle"><span>One of each platform's main deal</span><span class="amount">${e(formatRange(bundle))}</span></div>` : '';
-  return `<section class="kit-card kit-section"><header><h2>Sponsorship rates</h2></header>${rows}${bundleRow}<p class="note">Starting rates. Custom packages available.</p></section>`;
+  const peak = seasonalBoost(user) > 0 ? ' Peak season rates.' : '';
+  return `<section class="kit-card kit-section"><header><h2>Sponsorship rates</h2></header>${rows}${bundleRow}<p class="note">Starting rates.${peak} Custom packages available.</p></section>`;
 }
 
 function customRatesSection(rateCard, packages) {
