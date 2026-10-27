@@ -19,7 +19,7 @@ Free media kits and sponsorship rate estimates for creators. Built for gaming cr
 | Hosting | Cloudflare Worker `ratecalculator` with static assets from `public/` |
 | Database | Cloudflare D1 `creatorgg` (tables created and upgraded automatically, see `src/lib/migrate.js`) |
 | Secrets | Cloudflare → Worker → Settings → Variables and Secrets (never in the repo or chat) |
-| Payments | Stripe (live mode), webhook to `/api/stripe/webhook`, Customer Portal on |
+| Payments | Stripe (live mode), webhook to `/api/stripe/webhook`, Customer Portal on with switching between Essential, Pro and Ultra |
 | Sign-in | Twitch developer app (Confidential), Google Cloud project with YouTube Data API |
 | Admin | `/admin`, only for account IDs in the `ADMIN_USER_IDS` secret |
 | Setup check | `/api/status` shows which keys the live site can see (true/false only) |
@@ -92,8 +92,6 @@ Free media kits and sponsorship rate estimates for creators. Built for gaming cr
 - **Deal tracker (Pro):** Deals tab with stages (Pitched → Negotiating → Agreed → Delivered → Paid, or Lost), amounts in 15 currencies, deliverables, content and payment due dates with overdue alerts, totals (earned this month, owed, pipeline), brand autofill from earlier deals and the kit's brand list, brand logos, and "Start a deal" from tracked links (deals show when the brand opens the kit). Deals are kept, hidden, if Pro lapses, and move over when profiles merge.
 
 ### Waiting on / to do outside the code
-- [ ] In Stripe's Customer Portal settings, add Ultra (both prices) to plan switching.
-- [ ] In Stripe's Customer Portal settings, add Pro (both prices) to plan switching, so subscribers can move down to Essential or change monthly/yearly themselves.
 - [ ] **Google verification** of the `youtube.readonly` scope (submitted). Until approved, YouTube sign-in shows "Google hasn't verified this app" and is capped at 100 users. **Don't launch widely until this is approved.**
 - [ ] **UK broadband filters** block the new domain for some people (a UK friend couldn't open `creatorgg.com` but could open the workers.dev address). Submit `creatorgg.com` for categorization at Cisco Talos, Fortinet and Palo Alto Networks, and report it to Sky, BT, Virgin Media and TalkTalk. Usually clears up as the domain ages.
 - [ ] Turn on **Always Use HTTPS** (Cloudflare → creatorgg.com → SSL/TLS → Edge Certificates).
