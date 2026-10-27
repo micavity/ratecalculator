@@ -15,7 +15,7 @@ export const RESERVED_SLUGS = new Set([
   'about', 'admin', 'affiliate', 'affiliates', 'api', 'app', 'assets', 'auth', 'blog', 'brands', 'calculator',
   'book', 'contact', 'creatorgg', 'faq', 'features', 'guides', 'home', 'vendor',
   'dashboard', 'help', 'index', 'kit', 'login', 'logout', 'pricing', 'privacy', 'settings',
-  'signup', 'static', 'support', 'team', 'terms', 'u', 'www',
+  'signup', 'static', 'support', 'team', 'terms', 'u', 'update', 'www',
 ]);
 
 const SLUG_PATTERN = /^[a-z0-9_-]{3,30}$/;

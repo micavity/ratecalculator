@@ -30,6 +30,7 @@
       <button type="button" role="tab" class="tab" id="tab-edit" aria-controls="profile" aria-selected="false">Edit kit</button>
       <button type="button" role="tab" class="tab" id="tab-versions" aria-controls="panel-versions" aria-selected="false">Kit versions</button>
       <button type="button" role="tab" class="tab" id="tab-deals" aria-controls="panel-deals" aria-selected="false">Deals</button>
+      <button type="button" role="tab" class="tab" id="tab-reports" aria-controls="panel-reports" aria-selected="false">Reports</button>
     </div>
 
     <!-- Overview -->
@@ -170,6 +171,22 @@
         <button type="button" class="button-danger" id="deleteAccount">Delete my account</button>
         <p class="small muted account-id">Account ID: <code id="accountId"></code></p>
       </section>
+    </div>
+
+    <!-- Monthly reports -->
+    <div id="panel-reports" role="tabpanel" aria-labelledby="tab-reports" class="tab-panel" hidden>
+      <section class="panel report-head">
+        <div class="section-head">
+          <h2>Monthly reports</h2>
+          <select id="reportMonth" aria-label="Month"></select>
+        </div>
+        <p class="small muted">How your channels, kit and sponsorships did each month. The current month updates as it goes.</p>
+        <div class="actions report-actions">
+          <button type="button" class="button-secondary" id="printReport">Download PDF</button>
+          <button type="button" class="button-secondary" id="csvReport" hidden>Download CSV</button>
+        </div>
+      </section>
+      <div id="reportSections" class="report-sections"></div>
     </div>
 
     <!-- Deals (Pro) -->

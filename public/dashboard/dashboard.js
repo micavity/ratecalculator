@@ -92,6 +92,7 @@ const TABS = {
   edit: form,
   versions: document.getElementById('panel-versions'),
   deals: document.getElementById('panel-deals'),
+  reports: document.getElementById('panel-reports'),
 };
 
 function showTab(name) {
@@ -2903,6 +2904,215 @@ async function setupManagerMode() {
   if (state.manager.role === 'deals' && ['edit', 'versions'].includes(location.hash.slice(1))) showTab('deals');
 }
 
+// Monthly reports: growth for everyone, more with each plan
+
+const reportMonth = document.getElementById('reportMonth');
+const reportSections = document.getElementById('reportSections');
+const REPORT_INFO = {
+  growth: ['Growth', 'Followers and average views per platform, start of month vs end.'],
+  kitInterest: ['Kit and brand interest', 'Kit views, where visitors came from, which brands opened your kit or proposals, and who to follow up with.'],
+  summary: ['Business summary', 'What you earned, deals closed, proposals sent and your win rate, compared with last month.'],
+  pipeline: ['Pipeline and money health', 'Deals by stage, deals gone quiet, overdue work and payments, expected income and how fast brands pay.'],
+  sponsors: ['Sponsor performance', 'Views delivered for each campaign and your cost per 1,000 views, ammunition for your next negotiation.'],
+  rates: ['Rate check', 'How your views changed this month and whether it\'s time to raise your rates.'],
+  update: ['Monthly update for brands', 'A polished one-page update to send past and current sponsors, to get rebooked.'],
+};
+let reportData = null;
+
+function monthLabel(month) {
+  const [y, m] = month.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' });
+}
+
+function totalsText(totals) {
+  const entries = Object.entries(totals || {});
+  return entries.length ? entries.map(([c, a]) => formatMoney(Math.round(a * 100) / 100, c)).join(' + ') : '–';
+}
+
+function change(pctValue) {
+  if (pctValue === null || pctValue === undefined) return '';
+  return `${pctValue > 0 ? '+' : ''}${pctValue}%`;
+}
+
+function statCard(value, label, note = '') {
+  return el('div', { class: 'stat' }, [
+    el('span', { class: 'stat-value', text: value }),
+    el('span', { class: 'stat-label', text: label }),
+    note ? el('span', { class: `stat-note ${note.startsWith('-') ? 'down' : note.startsWith('+') ? 'up' : ''}`, text: note }) : '',
+  ]);
+}
+
+function list(rows, empty) {
+  return rows.length ? el('ul', { class: 'report-list' }, rows.map((r) => el('li', {}, r))) : el('p', { class: 'small muted', text: empty });
+}
+
+const REPORT_RENDER = {
+  growth(d) {
+    if (!d.platforms.length) return [el('p', { class: 'small muted', text: 'No daily stats for this month yet. They\'re saved once a day, so check back soon.' })];
+    return [
+      el('div', { class: 'view-stats deal-stats' }, d.platforms.filter((p) => p.followersEnd != null).map((p) => statCard(
+        compact.format(p.followersEnd), `${p.name} ${p.platform === 'youtube' ? 'subscribers' : 'followers'}`,
+        p.followersChange ? `${p.followersChange > 0 ? '+' : ''}${number.format(p.followersChange)} (${change(p.followersPct)})` : 'No change',
+      ))),
+      list(d.platforms.filter((p) => p.avgViewsEnd != null).map((p) => [
+        el('strong', { text: `${p.name} average views: ` }),
+        document.createTextNode(`${number.format(p.avgViewsStart)} → ${number.format(p.avgViewsEnd)} ${p.avgViewsPct !== null ? `(${change(p.avgViewsPct)})` : ''}`),
+      ]), ''),
+      d.platforms.some((p) => p.platform === 'youtube') ? '' : el('p', { class: 'small muted', text: 'YouTube numbers are only kept for 30 days (YouTube\'s rules), so older months don\'t include YouTube.' }),
+    ];
+  },
+  kitInterest(d) {
+    return [
+      el('div', { class: 'view-stats deal-stats' }, [
+        statCard(number.format(d.views), 'Kit views', d.viewsPct !== null ? `${change(d.viewsPct)} vs last month` : ''),
+        statCard(number.format(d.brandOpens.reduce((s, o) => s + o.opens, 0)), 'Brand link opens'),
+        statCard(number.format(d.proposalViews.length), 'Proposals viewed'),
+      ]),
+      el('div', { class: 'analytics-lists' }, [
+        barList('Where visitors came from', d.sources),
+        barList('Countries', d.countries, (r) => countryName(r.label)),
+      ]),
+      el('h3', { class: 'rates-heading', text: 'Brands that looked' }),
+      list([...d.brandOpens.map((o) => `${o.label}: opened your kit ${o.opens} time${o.opens === 1 ? '' : 's'}, last ${relativeTime(o.last)}`),
+        ...d.proposalViews.map((p) => `${p.label}: viewed your proposal, last ${relativeTime(p.last)}`)], 'No tracked links or proposals were opened this month.'),
+      el('h3', { class: 'rates-heading', text: 'Follow up with these' }),
+      list(d.followUp.map((o) => `${o.label} (looked at your ${o.via}, no deal yet)`), 'Nobody to chase. Nice!'),
+    ];
+  },
+  summary(d) {
+    return [
+      el('div', { class: 'view-stats deal-stats' }, [
+        statCard(totalsText(d.earned), 'Earned', `Last month: ${totalsText(d.earnedPrev)}`),
+        statCard(String(d.dealsPaid), 'Deals paid'),
+        statCard(String(d.newDeals), 'New deals'),
+        statCard(d.winRate !== null ? `${d.winRate}%` : '–', 'Proposal win rate', `${d.proposalsAccepted} of ${d.proposalsSent} accepted`),
+      ]),
+      el('h3', { class: 'rates-heading', text: 'Top brands' }),
+      list(d.topBrands.map((b) => `${b.brand}: ${formatMoney(b.amount, b.currency)}`), 'No paid deals this month.'),
+    ];
+  },
+  pipeline(d) {
+    const stageNames = { pitched: 'Pitched', negotiating: 'Negotiating', agreed: 'Agreed', delivered: 'Delivered' };
+    return [
+      el('div', { class: 'view-stats deal-stats' }, [
+        ...Object.entries(stageNames).map(([key, name]) => statCard(String(d.stages[key]?.count || 0), name, totalsText(d.stages[key]?.totals))),
+        statCard(totalsText(d.expected), 'Expected income'),
+        statCard(d.avgDaysToPay !== null ? `${d.avgDaysToPay} days` : '–', 'Average time to get paid'),
+      ]),
+      el('h3', { class: 'rates-heading', text: 'Needs attention' }),
+      list([
+        ...d.quiet.map((q) => `${q.brand}: no update in ${q.days} days, send a follow-up?`),
+        ...d.overdueContent.map((b) => `${b}: content is overdue`),
+        ...d.overduePayment.map((b) => `${b}: payment is overdue`),
+        ...d.latePayers.map((p) => `${p.brand} paid ${p.number} ${p.late} day${p.late === 1 ? '' : 's'} late`),
+      ], 'Nothing overdue or stuck. 🎉'),
+      el('p', { class: 'small muted', text: 'Deal stages and overdue items are as of today.' }),
+    ];
+  },
+  sponsors(d) {
+    if (!d.campaigns.length) return [el('p', { class: 'small muted', text: 'No campaign reports this month. Create one from a delivered deal to see the views you delivered here.' })];
+    return [list(d.campaigns.map((c) => [
+      el('strong', { text: c.brand }),
+      document.createTextNode(`: ${number.format(c.views)} views${c.amount !== null ? ` for ${formatMoney(c.amount, c.currency)}` : ''}${c.cpm !== null ? `, ${formatMoney(c.cpm, c.currency)} per 1,000 views` : ''}`),
+    ]), '')];
+  },
+  rates(d) {
+    return [
+      el('p', { class: 'report-advice', text: d.advice }),
+      list(d.changes.map((c) => `${c.name} average views: ${number.format(c.from)} → ${number.format(c.to)}${c.pct !== null ? ` (${change(c.pct)})` : ''}`), ''),
+      d.estimates.length ? el('h3', { class: 'rates-heading', text: 'Your estimated rates today' }) : '',
+      ...d.estimates.map((s) => list(s.rates.map(([label, range]) => `${s.name} · ${label}: ${range}`), '')),
+    ];
+  },
+  update(d) {
+    const url = `${location.origin}${d.url}`;
+    const copy = el('button', { type: 'button', class: 'button-secondary', text: 'Copy link' });
+    copy.addEventListener('click', () => copyText(url, copy));
+    return [
+      el('p', { class: 'small muted', text: 'Send this to brands you\'ve worked with. It shows your growth this month, your top content, open dates and a "Work with me again" button.' }),
+      el('div', { class: 'actions' }, [el('a', { class: 'button', href: d.url, target: '_blank', rel: 'noopener', text: 'View update' }), copy]),
+    ];
+  },
+};
+
+function renderMonthly() {
+  const { sections } = reportData;
+  reportSections.replaceChildren(...Object.keys(REPORT_INFO).map((key) => {
+    const [title, blurb] = REPORT_INFO[key];
+    const section = sections[key];
+    if (!section || section.locked) {
+      return el('section', { class: 'panel report-section report-locked no-print' }, [
+        el('h2', {}, [document.createTextNode(title), el('span', { class: 'plan-pill', text: section?.planName || 'Ultra' })]),
+        el('p', { class: 'small muted', text: blurb }),
+        el('a', { class: 'small', href: '/pricing/', text: `Included with ${section?.planName || 'Ultra'} →` }),
+      ]);
+    }
+    return el('section', { class: 'panel report-section' }, [el('h2', { text: title }), ...REPORT_RENDER[key](section).filter(Boolean)]);
+  }));
+  document.getElementById('csvReport').hidden = !sections.summary || sections.summary.locked;
+}
+
+async function loadMonthly() {
+  try {
+    reportData = await api(`/api/monthly${reportMonth.value ? `?month=${reportMonth.value}` : ''}`);
+  } catch (err) {
+    reportSections.replaceChildren(el('p', { class: 'small muted', text: err.message }));
+    return;
+  }
+  reportMonth.replaceChildren(...reportData.months.map((m) => el('option', { value: m, text: monthLabel(m) })));
+  reportMonth.value = reportData.month;
+  renderMonthly();
+}
+
+reportMonth.addEventListener('change', loadMonthly);
+document.getElementById('printReport').addEventListener('click', () => {
+  document.body.classList.add('printing-report');
+  window.print();
+  document.body.classList.remove('printing-report');
+});
+
+document.getElementById('csvReport').addEventListener('click', () => {
+  const s = reportData.sections;
+  const rows = [['Section', 'Item', 'Value']];
+  if (s.summary && !s.summary.locked) {
+    rows.push(['Business summary', 'Earned', totalsText(s.summary.earned)], ['Business summary', 'Earned last month', totalsText(s.summary.earnedPrev)],
+      ['Business summary', 'Deals paid', s.summary.dealsPaid], ['Business summary', 'New deals', s.summary.newDeals],
+      ['Business summary', 'Proposals sent', s.summary.proposalsSent], ['Business summary', 'Proposals accepted', s.summary.proposalsAccepted],
+      ...s.summary.topBrands.map((b) => ['Top brands', b.brand, `${b.amount.toFixed(2)} ${b.currency}`]));
+  }
+  if (s.pipeline && !s.pipeline.locked) {
+    for (const [stage, v] of Object.entries(s.pipeline.stages)) rows.push(['Pipeline', stage, `${v.count} deals, ${totalsText(v.totals)}`]);
+    rows.push(['Pipeline', 'Expected income', totalsText(s.pipeline.expected)], ['Pipeline', 'Average days to get paid', s.pipeline.avgDaysToPay ?? '']);
+  }
+  if (s.growth) for (const p of s.growth.platforms) rows.push(['Growth', p.name, `${p.followersStart ?? ''} → ${p.followersEnd ?? ''}`]);
+  const blob = new Blob([`${rows.map((r) => r.map(csvCell).join(',')).join('\n')}\n`], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  download(url, `creatorgg-report-${reportData.month}.csv`);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+});
+
+// On the first visit of a new month, point to last month's report
+function announceReport() {
+  const now = new Date();
+  const thisMonth = now.toISOString().slice(0, 7);
+  if (stored('cgg_report_month') === thisMonth) return;
+  store('cgg_report_month', thisMonth);
+  if (!stored('cgg_report_seen_before')) {
+    store('cgg_report_seen_before', '1');
+    return;
+  }
+  const last = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)).toISOString().slice(0, 7);
+  const open = el('button', { type: 'button', class: 'button-link', text: 'See it' });
+  open.addEventListener('click', () => {
+    reportMonth.replaceChildren(el('option', { value: last, text: monthLabel(last) }));
+    reportMonth.value = last;
+    showTab('reports');
+    loadMonthly();
+  });
+  showBanner(`📊 Your ${monthLabel(last)} report is ready. `, 'info');
+  banner.append(open);
+}
+
 // Referral program
 
 const referralForm = document.getElementById('payoutForm');
@@ -2973,6 +3183,8 @@ async function init() {
   showTab(location.hash.slice(1));
   setupManagerMode();
   app.hidden = false;
+  loadMonthly();
+  announceReport();
   if (!state.manager) loadReferrals();
   loadTeam();
   // Continue an upgrade started on the pricing page

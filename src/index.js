@@ -25,6 +25,7 @@ import * as proposals from './routes/proposals.js';
 import * as booking from './routes/booking.js';
 import * as reports from './routes/reports.js';
 import * as team from './routes/team.js';
+import * as monthly from './routes/monthly.js';
 import { ensureSchema } from './lib/migrate.js';
 import { refreshStaleUsers } from './lib/users.js';
 import { pruneOldEvents } from './lib/analytics.js';
@@ -85,6 +86,8 @@ const ROUTES = [
   ['POST', '/api/passkeys/login/options', team.loginOptions],
   ['POST', '/api/passkeys/login/verify', team.loginVerify],
   ['GET', '/team/join/:token', team.joinPage],
+  ['GET', '/api/monthly', monthly.onRequestGet],
+  ['GET', '/update/:slug/:month', monthly.updatePage],
   ['POST', '/api/stripe/webhook', billing.webhook],
   ['GET', '/api/referrals', referrals.onRequestGet],
   ['PUT', '/api/referrals', referrals.onRequestPut],
