@@ -12,7 +12,7 @@ import { SOCIALS, SOCIAL_COLUMNS, cleanHandle } from './socials.js';
 // Paths that can't be used as media kit links
 export const RESERVED_SLUGS = new Set([
   'about', 'admin', 'affiliate', 'affiliates', 'api', 'app', 'assets', 'auth', 'blog', 'brands', 'calculator',
-  'contact', 'creatorgg', 'faq', 'features', 'guides', 'home', 'vendor',
+  'book', 'contact', 'creatorgg', 'faq', 'features', 'guides', 'home', 'vendor',
   'dashboard', 'help', 'index', 'kit', 'login', 'logout', 'pricing', 'privacy', 'settings',
   'signup', 'static', 'support', 'terms', 'u', 'www',
 ]);
@@ -57,12 +57,12 @@ function saveConnection(env, userId, provider, account, stats) {
 }
 
 // Per-creator tables, besides users, connections and sessions
-export const USER_DATA_TABLES = ['kit_views', 'kit_sources', 'kit_countries', 'link_events', 'tracked_links', 'kit_versions', 'stat_snapshots', 'deals', 'invoices', 'proposals'];
+export const USER_DATA_TABLES = ['kit_views', 'kit_sources', 'kit_countries', 'link_events', 'tracked_links', 'kit_versions', 'stat_snapshots', 'deals', 'invoices', 'proposals', 'booking_slots'];
 
 // Profile fields copied from the merged-away profile when the kept one is empty
 const MERGE_FIELDS = [
   'avatar_url', 'bio', 'games', 'game_art', 'contact_email', 'twitch_avg_viewers', 'invoice_settings',
-  'tiktok_handle', 'tiktok_followers', 'tiktok_avg_views', 'tiktok_engagement',
+  'booking', 'tiktok_handle', 'tiktok_followers', 'tiktok_avg_views', 'tiktok_engagement',
   ...SOCIAL_COLUMNS,
 ];
 
@@ -130,6 +130,7 @@ async function mergeUsers(env, aId, bId, provider, account, stats) {
   statements.push(env.DB.prepare('UPDATE deals SET user_id = ?, link_id = NULL WHERE user_id = ?').bind(keep.id, drop.id));
   statements.push(env.DB.prepare('UPDATE invoices SET user_id = ? WHERE user_id = ?').bind(keep.id, drop.id));
   statements.push(env.DB.prepare('UPDATE proposals SET user_id = ? WHERE user_id = ?').bind(keep.id, drop.id));
+  statements.push(env.DB.prepare('UPDATE booking_slots SET user_id = ? WHERE user_id = ?').bind(keep.id, drop.id));
 
   // Analytics, links and versions on the merged-away profile go with it
   for (const table of USER_DATA_TABLES) {

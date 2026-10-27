@@ -267,10 +267,13 @@ export function renderKit(user, connections, { origin, host, viewer, print, path
     ? `<img class="avatar" src="${e(user.avatar_url)}" alt="" width="96" height="96">`
     : `<div class="avatar avatar-fallback" aria-hidden="true">${e(user.display_name.charAt(0).toUpperCase())}</div>`;
   const pageUrl = `${origin}${path}`;
+  const bookButton = limits.ultra && parseJson(user.booking, {}).enabled
+    ? `<a class="button button-secondary no-print book-button" href="/book/${e(user.slug)}">Book me</a>`
+    : '';
   const contact = user.contact_email
-    ? `<a class="button no-print" href="mailto:${e(user.contact_email)}?subject=${encodeURIComponent(`Sponsorship inquiry for ${user.display_name}`)}">Work with me</a>
+    ? `${bookButton}<a class="button no-print" href="mailto:${e(user.contact_email)}?subject=${encodeURIComponent(`Sponsorship inquiry for ${user.display_name}`)}">Work with me</a>
        <p class="print-only">Contact: ${e(user.contact_email)} · ${e(pageUrl)}</p>`
-    : `<p class="print-only">${e(pageUrl)}</p>`;
+    : `${bookButton}<p class="print-only">${e(pageUrl)}</p>`;
   const description = user.bio || `${user.display_name}'s media kit: audience stats and sponsorship rates.`;
   const ownerBar = viewer?.id === user.id
     ? '<p class="owner-bar no-print">This is your media kit. <a href="/dashboard/">Edit it on your dashboard →</a></p>'

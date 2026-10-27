@@ -1754,3 +1754,17 @@ html[data-kit-style="gradient"] body {
 .month-bar { width: 100%; max-width: 32px; border-radius: 6px 6px 2px 2px; background: var(--accent); }
 .month-label { font-size: 0.7rem; color: var(--muted); }
 #incomePanel .section-head select { width: auto; }
+
+/* Ultra Book me page */
+
+.slots { display: grid; gap: 8px; margin-bottom: 16px; }
+.slot { display: flex; align-items: flex-start; gap: 10px; margin: 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; }
+.slot:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.slot input { margin-top: 4px; accent-color: var(--accent); }
+.slot small { margin: 2px 0 0; }
+.booking-form h2 { margin: 0 0 12px; font-size: 1.1rem; }
+.hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.book-button { margin-right: 8px; }
+.booking-add { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.5fr) auto; gap: 8px; align-items: center; margin-bottom: 12px; }
+.booking-add input, .booking-add select { margin: 0; }
+@media (max-width: 560px) { .booking-add { grid-template-columns: 1fr 1fr; } }

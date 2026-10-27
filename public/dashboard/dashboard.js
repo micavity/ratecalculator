@@ -1616,6 +1616,7 @@ async function loadDeals() {
     loadProposals();
     setupPitches();
     renderIncome();
+    loadBooking();
     return;
   }
   deals = data.deals;
@@ -1625,6 +1626,7 @@ async function loadDeals() {
   renderBrandSuggestions();
   setupPitches();
   renderIncome();
+  loadBooking();
 }
 
 // Kit brands are saved as "Name, https://link" lines
@@ -2247,6 +2249,106 @@ document.getElementById('deleteInvoice').addEventListener('click', async () => {
     invoiceError.hidden = false;
   }
 });
+
+// Book me page (Ultra)
+
+const bookingPanel = document.getElementById('bookingPanel');
+const bookingBody = document.getElementById('bookingBody');
+
+function bookingUrl() {
+  return `${location.origin}/book/${state.profile.slug}`;
+}
+
+async function saveBooking(settings, status) {
+  try {
+    await api('/api/booking', { method: 'PUT', body: JSON.stringify(settings) });
+    status.textContent = 'Saved';
+    status.className = 'save-status ok';
+  } catch (err) {
+    status.textContent = err.message;
+    status.className = 'save-status error';
+  }
+}
+
+function renderBookingPanel(data) {
+  const { settings, slots, kinds } = data;
+  const enabled = el('input', { type: 'checkbox' });
+  enabled.checked = settings.enabled;
+  const intro = el('textarea', { rows: '2', maxlength: '600', placeholder: 'e.g. I\'m booking Q1 campaigns now. Streams are 3 hours with a 60-second ad read and a chat command.' });
+  intro.value = settings.intro;
+  const status = el('span', { class: 'save-status', role: 'status' });
+  const save = el('button', { type: 'button', class: 'button-secondary', text: 'Save' });
+  save.addEventListener('click', () => saveBooking({ enabled: enabled.checked, intro: intro.value }, status).then(loadBooking));
+  const copy = el('button', { type: 'button', class: 'button-secondary', text: 'Copy link' });
+  copy.addEventListener('click', () => copyText(bookingUrl(), copy));
+  const view = el('a', { class: 'button button-secondary', href: bookingUrl(), target: '_blank', rel: 'noopener', text: 'View page' });
+
+  const day = el('input', { type: 'date', min: isoDay(), 'aria-label': 'Date' });
+  const kind = el('select', { 'aria-label': 'Type' }, kinds.map((k) => el('option', { value: k, text: k })));
+  const note = el('input', { type: 'text', maxlength: '200', placeholder: 'Note (optional), e.g. evening stream', 'aria-label': 'Note' });
+  const add = el('button', { type: 'button', text: 'Add date' });
+  add.addEventListener('click', async () => {
+    try {
+      await api('/api/booking/slots', { method: 'POST', body: JSON.stringify({ day: day.value, kind: kind.value, note: note.value }) });
+      loadBooking();
+    } catch (err) {
+      showBanner(err.message);
+    }
+  });
+
+  const rows = slots.map((s) => {
+    const actions = [];
+    if (s.status === 'requested') {
+      const reopen = el('button', { type: 'button', class: 'button-link', text: 'Reopen' });
+      reopen.addEventListener('click', async () => {
+        await api(`/api/booking/slots/${s.id}`, { method: 'PUT', body: JSON.stringify({ status: 'open' }) }).catch((err) => showBanner(err.message));
+        loadBooking();
+      });
+      actions.push(reopen);
+    }
+    const remove = el('button', { type: 'button', class: 'button-link', text: 'Remove' });
+    remove.addEventListener('click', async () => {
+      await api(`/api/booking/slots/${s.id}`, { method: 'DELETE' }).catch((err) => showBanner(err.message));
+      loadBooking();
+    });
+    actions.push(remove);
+    const deal = s.dealId && deals.find((d) => d.id === s.dealId);
+    return el('div', { class: 'invoice-row' }, [
+      el('div', { class: 'invoice-row-main' }, [
+        el('div', { class: 'deal-title' }, [
+          el('strong', { text: `${shortDate(s.day)} · ${s.kind}` }),
+          el('span', { class: `deal-badge ${s.status === 'requested' ? 'deal-badge-good' : ''}`, text: s.status === 'requested' ? `Requested${deal ? ` by ${deal.brand}` : ''}` : 'Open' }),
+        ]),
+        s.note ? el('p', { class: 'small muted', text: s.note }) : '',
+      ]),
+      el('div', { class: 'kit-link-actions invoice-actions' }, actions),
+    ]);
+  });
+
+  bookingBody.replaceChildren(
+    el('label', { class: 'toggle' }, [enabled, document.createTextNode('Turn on my Book me page')]),
+    el('label', {}, [document.createTextNode('Intro for brands '), el('span', { class: 'opt', text: 'optional' }), intro]),
+    el('div', { class: 'actions' }, [save, copy, view, status]),
+    el('h3', { class: 'rates-heading', text: 'Open dates' }),
+    el('div', { class: 'booking-add' }, [day, kind, note, add]),
+    rows.length ? el('div', { class: 'invoice-list' }, rows) : el('p', { class: 'small muted', text: 'No upcoming dates. Brands can still send a request for "another date".' }),
+  );
+}
+
+async function loadBooking() {
+  bookingPanel.classList.toggle('locked', !state.limits.ultra);
+  if (!state.limits.ultra) {
+    bookingBody.replaceChildren(el('div', { class: 'teaser' }, [
+      el('p', { text: 'Ultra gives you a Book me page: list your open stream and video dates, and brands request one in a couple of clicks. Requests arrive here as deals.' }),
+    ]));
+    return;
+  }
+  try {
+    renderBookingPanel(await api('/api/booking'));
+  } catch (err) {
+    bookingBody.replaceChildren(el('p', { class: 'small muted', text: err.message }));
+  }
+}
 
 // Income report (Ultra): built from paid deals, so nothing is counted twice
 

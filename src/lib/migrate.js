@@ -243,6 +243,21 @@ export const MIGRATIONS = [
   ],
   // 11: Ultra auto-featured videos
   ['ALTER TABLE users ADD COLUMN auto_featured INTEGER NOT NULL DEFAULT 0'],
+  // 12: Ultra "Book me" page: settings, and the open dates brands can request
+  [
+    'ALTER TABLE users ADD COLUMN booking TEXT',
+    `CREATE TABLE IF NOT EXISTS booking_slots (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      day TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      note TEXT,
+      status TEXT NOT NULL DEFAULT 'open',
+      deal_id TEXT,
+      created_at INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS booking_slots_user ON booking_slots (user_id, day)',
+  ],
 ];
 
 let ready = null;
