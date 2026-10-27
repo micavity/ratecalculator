@@ -7,7 +7,7 @@ import {
 } from './kit-content.js';
 import { withVideoStats } from './video-stats.js';
 import { PLAN_RANK, effectivePlan, planLimits } from './plans.js';
-import { SOCIALS, SOCIAL_COLUMNS, cleanHandle } from './socials.js';
+import { SOCIALS, SOCIAL_COLUMNS, STAT_KEYS, cleanHandle } from './socials.js';
 
 // Paths that can't be used as media kit links
 export const RESERVED_SLUGS = new Set([
@@ -292,6 +292,7 @@ export function profileFields(user) {
     focus: user.focus,
     showRates: Boolean(user.show_rates),
     autoFeatured: Boolean(user.auto_featured),
+    hiddenStats: parseJson(user.hidden_stats, []),
     twitchAvgViewers: user.twitch_avg_viewers,
     twitchHours: user.twitch_hours,
     tiktokHandle: user.tiktok_handle,
@@ -356,6 +357,7 @@ export function validateProfile(body) {
   values.focus = body.focus in FOCUS_MULTIPLIER ? body.focus : 'gaming';
   values.show_rates = body.showRates ? 1 : 0;
   values.auto_featured = body.autoFeatured ? 1 : 0;
+  values.hidden_stats = JSON.stringify((Array.isArray(body.hiddenStats) ? body.hiddenStats : []).filter((k) => STAT_KEYS.includes(k)));
 
   const numbers = [
     ['twitch_avg_viewers', 'twitchAvgViewers', { min: 0, max: 10_000_000, integer: true }],
@@ -418,7 +420,7 @@ export function validateProfile(body) {
   return { values };
 }
 
-const ESSENTIAL_COLUMNS = ['rate_mode', 'rate_card', 'packages', 'hide_branding', 'sections', 'kit_style', 'accent'];
+const ESSENTIAL_COLUMNS = ['rate_mode', 'rate_card', 'packages', 'hide_branding', 'sections', 'kit_style', 'accent', 'hidden_stats'];
 
 /**
  * Applies plan limits to validated profile values. Settings the creator's

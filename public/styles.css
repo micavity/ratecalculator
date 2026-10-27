@@ -1786,3 +1786,10 @@ html[data-kit-style="gradient"] body {
 .manager-bar { margin: 0; }
 .manager-login h2 { margin: 0 0 6px; font-size: 1.1rem; }
 .manager-login { margin-top: 16px; }
+
+/* Essential: choose which stats show */
+
+.stat-toggles { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.stat-toggle-group { margin: 0; padding: 8px 12px; border: 1px solid var(--border); border-radius: 10px; }
+.stat-toggle-group legend { font-weight: 600; font-size: 0.9rem; padding: 0 4px; }
+.stat-toggle-group .toggle { margin: 4px 0; font-size: 0.9rem; }

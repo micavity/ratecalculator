@@ -323,6 +323,8 @@ export const MIGRATIONS = [
       expires_at INTEGER NOT NULL
     )`,
   ],
+  // 15: Essential: stats the creator chose to hide from their kit
+  ['ALTER TABLE users ADD COLUMN hidden_stats TEXT'],
 ];
 
 let ready = null;

@@ -3,7 +3,7 @@
 import { escapeHtml as e } from './http.js';
 import { parseJson } from './kit-content.js';
 import { SOCIALS } from './socials.js';
-import { siteHeader, kitColor, accentStyle } from './kit.js';
+import { siteHeader, kitColor, accentStyle, hiddenStats } from './kit.js';
 import { planLimits } from './plans.js';
 
 export const MAX_PROPOSAL_ITEMS = 15;
@@ -100,14 +100,15 @@ const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFra
 // The creator's three biggest numbers, verified ones marked
 function headlineStats(user, connections) {
   const yt = connections.youtube?.stats || {};
+  const hidden = hiddenStats(user, planLimits(user).essential);
   return [
-    ['YouTube subscribers', yt.subscribers, true],
-    ['Avg YouTube views', yt.avgViews, true],
-    ['Twitch followers', connections.twitch?.stats.followers, true],
-    ['Avg Twitch viewers', user.twitch_avg_viewers, false],
-    ['TikTok followers', user.tiktok_followers, false],
-    ...SOCIALS.map((s) => [`${s.name} followers`, user[`${s.key}_followers`], false]),
-  ].filter(([, v]) => Number(v) > 0).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    ['YouTube subscribers', yt.subscribers, true, 'youtube.subscribers'],
+    ['Avg YouTube views', yt.avgViews, true, 'youtube.avgViews'],
+    ['Twitch followers', connections.twitch?.stats.followers, true, 'twitch.followers'],
+    ['Avg Twitch viewers', user.twitch_avg_viewers, false, 'twitch.avgViewers'],
+    ['TikTok followers', user.tiktok_followers, false, 'tiktok.followers'],
+    ...SOCIALS.map((s) => [`${s.name} followers`, user[`${s.key}_followers`], false, `${s.key}.followers`]),
+  ].filter(([, v, , key]) => Number(v) > 0 && !hidden.has(key)).sort((a, b) => b[1] - a[1]).slice(0, 3);
 }
 
 function lines(value) {

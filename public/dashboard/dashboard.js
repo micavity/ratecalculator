@@ -854,6 +854,28 @@ function setPath(obj, path, value) {
   o[keys.at(-1)] = value;
 }
 
+// Essential: which stats show on the kit
+const STAT_TOGGLES = [
+  ['Twitch', [['twitch.followers', 'Followers'], ['twitch.avgViewers', 'Avg viewers']]],
+  ['YouTube', [['youtube.subscribers', 'Subscribers'], ['youtube.avgViews', 'Avg views / video'], ['youtube.avgShorts', 'Avg views / Short'], ['youtube.engagement', 'Engagement']]],
+  ...['TikTok', 'Instagram', 'Facebook', 'X'].map((name) => {
+    const key = name === 'X' ? 'x' : name.toLowerCase();
+    return [name, [[`${key}.followers`, 'Followers'], [`${key}.avgViews`, 'Avg views'], [`${key}.engagement`, 'Engagement']]];
+  }),
+];
+
+function renderStatToggles(hidden) {
+  document.getElementById('statToggles').replaceChildren(...STAT_TOGGLES.map(([platform, stats]) => el('fieldset', { class: 'stat-toggle-group' }, [
+    el('legend', { text: platform }),
+    ...stats.map(([key, label]) => {
+      const input = el('input', { type: 'checkbox', 'data-stat': key });
+      input.checked = !hidden.includes(key);
+      input.disabled = !state.limits.essential;
+      return el('label', { class: 'toggle' }, [input, document.createTextNode(label)]);
+    }),
+  ])));
+}
+
 function fillForm() {
   const p = state.profile;
   for (const [name, value] of Object.entries(p)) {
@@ -872,6 +894,7 @@ function fillForm() {
   fillRows(rateCardEditor, p.rateCard);
   fillRows(packagesEditor, p.packages);
   renderSections(p.sections);
+  renderStatToggles(p.hiddenStats || []);
   document.getElementById('bioCount').textContent = form.elements.bio.value.length;
   renderGamePreview();
 }
@@ -894,6 +917,7 @@ function readForm() {
   data.packages = readRows(packagesEditor);
   data.sections = readSections();
   data.accent = form.elements.useAccent.checked ? form.elements.accentColor.value : '';
+  data.hiddenStats = [...document.querySelectorAll('#statToggles input')].filter((i) => !i.checked).map((i) => i.dataset.stat);
   return data;
 }
 
@@ -2711,19 +2735,24 @@ function renderPitch() {
   document.getElementById('mailPitch').href = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(pitchSubject.value)}&body=${encodeURIComponent(pitchText.value)}`;
 }
 
+// Essential gets the first-pitch template; Pro unlocks the rest
 function setupPitches() {
-  const locked = !state.limits.pro;
-  pitchPanel.classList.toggle('locked', locked);
+  const locked = !state.limits.essential;
+  const pro = state.limits.pro;
+  pitchPanel.classList.toggle('locked', !pro);
+  document.getElementById('pitchPill').textContent = pro ? 'Pro' : locked ? 'Essential' : '1 free on Essential · all 5 with Pro';
   pitchPanel.querySelectorAll('input, select, textarea, button, a').forEach((c) => {
     if ('disabled' in c) c.disabled = locked;
   });
   document.getElementById('mailPitch').hidden = locked;
-  if (!pitchTemplate.options.length) {
-    pitchTemplate.replaceChildren(...Object.entries(PITCHES).map(([key, t]) => el('option', { value: key, text: t.name })));
-  }
+  pitchTemplate.replaceChildren(...Object.entries(PITCHES).map(([key, t]) => {
+    const option = el('option', { value: key, text: pro || key === 'cold' ? t.name : `${t.name} (Pro)` });
+    option.disabled = !pro && key !== 'cold';
+    return option;
+  }));
   if (locked) {
     pitchSubject.value = 'Partnership idea: you x your next sponsor';
-    pitchText.value = 'Pro writes ready-to-send pitch emails for you, with your stats, rates and media kit link filled in: first pitches, follow-ups, rate replies, campaign recaps and more.';
+    pitchText.value = 'Essential includes a ready-to-send first pitch with your stats, topics and media kit link filled in. Pro adds follow-ups, rate replies, campaign recaps and more.';
     return;
   }
   renderPitch();

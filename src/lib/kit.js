@@ -21,6 +21,11 @@ function stat(label, value, note) {
   return `<div class="stat"><span class="stat-value">${e(value)}</span><span class="stat-label">${e(label)}</span>${note ? `<span class="stat-note">${e(note)}</span>` : ''}</div>`;
 }
 
+// Stats an Essential creator chose to hide (shown again if their plan lapses)
+export function hiddenStats(user, essential) {
+  return new Set(essential ? parseJson(user.hidden_stats, []) : []);
+}
+
 function platformCard(name, link, verified, stats) {
   const body = stats.filter(Boolean).join('');
   if (!body) return '';
@@ -202,35 +207,40 @@ export function renderKit(user, connections, { origin, host, viewer, print, path
   const tiktokUrl = user.tiktok_handle ? `https://www.tiktok.com/@${encodeURIComponent(user.tiktok_handle)}` : null;
   const yt = youtube?.stats || {};
 
+  // Essential creators can hide any stat; hidden ones also leave the follower total
+  const hidden = hiddenStats(user, essential);
+  const show = (key, value) => (hidden.has(key) ? null : value);
   const cards = [
     platformCard('Twitch', twitch && { url: twitch.url, label: twitch.username }, Boolean(twitch), [
-      stat('Followers', count(twitch?.stats.followers)),
-      stat('Avg viewers', count(user.twitch_avg_viewers), 'Self-reported'),
+      stat('Followers', show('twitch.followers', count(twitch?.stats.followers))),
+      stat('Avg viewers', show('twitch.avgViewers', count(user.twitch_avg_viewers)), 'Self-reported'),
     ]),
     platformCard('YouTube', youtube && { url: youtube.url, label: youtube.username }, Boolean(youtube), [
-      stat('Subscribers', count(yt.subscribers)),
-      stat('Avg views / video', count(yt.avgViews)),
-      stat('Avg views / Short', count(yt.avgShortsViews)),
-      stat('Engagement', yt.engagement != null ? `${yt.engagement}%` : null),
+      stat('Subscribers', show('youtube.subscribers', count(yt.subscribers))),
+      stat('Avg views / video', show('youtube.avgViews', count(yt.avgViews))),
+      stat('Avg views / Short', show('youtube.avgShorts', count(yt.avgShortsViews))),
+      stat('Engagement', show('youtube.engagement', yt.engagement != null ? `${yt.engagement}%` : null)),
     ]),
     platformCard('TikTok', tiktokUrl && { url: tiktokUrl, label: `@${user.tiktok_handle}` }, false, [
-      stat('Followers', count(user.tiktok_followers), 'Self-reported'),
-      stat('Avg views', count(user.tiktok_avg_views), 'Self-reported'),
-      stat('Engagement', user.tiktok_engagement != null ? `${user.tiktok_engagement}%` : null, 'Self-reported'),
+      stat('Followers', show('tiktok.followers', count(user.tiktok_followers)), 'Self-reported'),
+      stat('Avg views', show('tiktok.avgViews', count(user.tiktok_avg_views)), 'Self-reported'),
+      stat('Engagement', show('tiktok.engagement', user.tiktok_engagement != null ? `${user.tiktok_engagement}%` : null), 'Self-reported'),
     ]),
     ...SOCIALS.map((s) => {
       const handle = user[`${s.key}_handle`];
       const engagement = user[`${s.key}_engagement`];
       return platformCard(s.name, handle && { url: s.url(handle), label: s.key === 'facebook' ? `facebook.com/${handle}` : `@${handle}` }, false, [
-        stat('Followers', count(user[`${s.key}_followers`]), 'Self-reported'),
-        stat(s.viewsLabel, count(user[`${s.key}_avg_views`]), 'Self-reported'),
-        stat('Engagement', engagement != null ? `${engagement}%` : null, 'Self-reported'),
+        stat('Followers', show(`${s.key}.followers`, count(user[`${s.key}_followers`])), 'Self-reported'),
+        stat(s.viewsLabel, show(`${s.key}.avgViews`, count(user[`${s.key}_avg_views`])), 'Self-reported'),
+        stat('Engagement', show(`${s.key}.engagement`, engagement != null ? `${engagement}%` : null), 'Self-reported'),
       ]);
     }),
   ].join('');
 
-  const audienceTotal = (twitch?.stats.followers || 0) + (yt.subscribers || 0) + (user.tiktok_followers || 0)
-    + SOCIALS.reduce((sum, s) => sum + (user[`${s.key}_followers`] || 0), 0);
+  const audienceTotal = [
+    ['twitch.followers', twitch?.stats.followers], ['youtube.subscribers', yt.subscribers], ['tiktok.followers', user.tiktok_followers],
+    ...SOCIALS.map((s) => [`${s.key}.followers`, user[`${s.key}_followers`]]),
+  ].reduce((sum, [key, value]) => sum + (hidden.has(key) ? 0 : Number(value) || 0), 0);
 
   let rates = '';
   if (user.show_rates) {
