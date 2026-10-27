@@ -18,9 +18,9 @@ STRIPE_PRICE_YEARLY = "price_1UUskPLelV3WIKMlMR8INnqV"
 # Pro prices. Pro shows as "Coming soon" if these are removed.
 STRIPE_PRICE_PRO_MONTHLY = "price_1UUuraLelV3WIKMlZARMlnXF"
 STRIPE_PRICE_PRO_YEARLY = "price_1UUurtLelV3WIKMlVuHxQ7vp"
-# Ultra prices. Ultra shows as "Coming soon" until both are filled in.
-# STRIPE_PRICE_ULTRA_MONTHLY = ""
-# STRIPE_PRICE_ULTRA_YEARLY = ""
+# Ultra prices. Ultra shows as "Coming soon" if these are removed.
+STRIPE_PRICE_ULTRA_MONTHLY = "price_1UUxy0LelV3WIKMlkZjhDO6h"
+STRIPE_PRICE_ULTRA_YEARLY = "price_1UUxyhLelV3WIKMltYGMEUNF"
 
 # Refresh stale creator stats every 6 hours
 [triggers]
