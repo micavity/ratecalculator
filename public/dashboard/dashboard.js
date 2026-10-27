@@ -1615,6 +1615,7 @@ async function loadDeals() {
     loadInvoices();
     loadProposals();
     setupPitches();
+    renderIncome();
     return;
   }
   deals = data.deals;
@@ -1623,6 +1624,7 @@ async function loadDeals() {
   renderDeals();
   renderBrandSuggestions();
   setupPitches();
+  renderIncome();
 }
 
 // Kit brands are saved as "Name, https://link" lines
@@ -2245,6 +2247,111 @@ document.getElementById('deleteInvoice').addEventListener('click', async () => {
     invoiceError.hidden = false;
   }
 });
+
+// Income report (Ultra): built from paid deals, so nothing is counted twice
+
+const incomePanel = document.getElementById('incomePanel');
+const incomeBody = document.getElementById('incomeBody');
+const incomeYear = document.getElementById('incomeYear');
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function paidDeals(year) {
+  return deals.filter((d) => d.stage === 'paid' && d.paidOn && d.amount !== null && d.paidOn.startsWith(String(year)));
+}
+
+// The currency most of the year's money came in, used for the chart
+function mainCurrency(list) {
+  const totals = new Map();
+  for (const d of list) totals.set(d.currency, (totals.get(d.currency) || 0) + d.amount);
+  return [...totals].sort((a, b) => b[1] - a[1])[0]?.[0] || 'USD';
+}
+
+function csvCell(value) {
+  const text = String(value ?? '');
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function exportIncome(year) {
+  const rows = [['Date paid', 'Brand', 'Deliverables', 'Amount', 'Currency', 'Invoice', 'Contact']];
+  for (const d of paidDeals(year).sort((a, b) => a.paidOn.localeCompare(b.paidOn))) {
+    const invoice = invoices.find((i) => i.dealId === d.id && i.status !== 'void');
+    rows.push([d.paidOn, d.brand, d.deliverables, d.amount.toFixed(2), d.currency, invoice?.number || '', d.contactName]);
+  }
+  const blob = new Blob([`${rows.map((r) => r.map(csvCell).join(',')).join('\n')}\n`], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  download(url, `creatorgg-income-${year}.csv`);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function renderIncome() {
+  const locked = !state.limits.ultra;
+  incomePanel.classList.toggle('locked', locked);
+  incomeYear.hidden = locked;
+  if (locked) {
+    incomeBody.replaceChildren(el('div', { class: 'teaser' }, [
+      el('p', { text: 'Ultra turns your paid deals into an income report: earnings by month and by brand, your biggest partners, what you\'re still owed, and a spreadsheet export for your accountant or taxes.' }),
+      state.billing.ultraAvailable ? el('span', { class: 'plan-actions' }, upgradeButtons('ultra')) : el('p', { class: 'plan-cta', text: 'Ultra is $19.99/month · Coming soon' }),
+    ]));
+    return;
+  }
+  const thisYear = new Date().getFullYear();
+  const years = [...new Set([thisYear, ...deals.filter((d) => d.paidOn).map((d) => Number(d.paidOn.slice(0, 4)))])].sort((a, b) => b - a);
+  const selected = Number(incomeYear.value) || thisYear;
+  incomeYear.replaceChildren(...years.map((y) => el('option', { value: String(y), text: String(y) })));
+  incomeYear.value = String(years.includes(selected) ? selected : thisYear);
+  const year = Number(incomeYear.value);
+
+  const paid = paidDeals(year);
+  const owed = deals.filter((d) => ['agreed', 'delivered'].includes(d.stage));
+  const currency = mainCurrency(paid);
+  const inMain = paid.filter((d) => d.currency === currency);
+  const otherCurrencies = paid.filter((d) => d.currency !== currency);
+  const card = (value, label) => el('div', { class: 'stat' }, [el('span', { class: 'stat-value', text: value }), el('span', { class: 'stat-label', text: label })]);
+
+  if (!paid.length) {
+    incomeBody.replaceChildren(
+      el('div', { class: 'view-stats deal-stats' }, [card('–', `Earned in ${year}`), card(moneyTotal(owed), 'Still owed to you')]),
+      el('p', { class: 'small muted', text: `No paid deals in ${year} yet. Mark deals as Paid (or mark their invoices paid) and they'll show up here.` }),
+    );
+    return;
+  }
+
+  const byMonth = MONTHS.map((_, i) => inMain.filter((d) => Number(d.paidOn.slice(5, 7)) === i + 1).reduce((sum, d) => sum + d.amount, 0));
+  const max = Math.max(1, ...byMonth);
+  const chart = el('div', { class: 'month-chart', role: 'img', 'aria-label': `Earnings by month in ${year}` }, byMonth.map((amount, i) => el('div', { class: 'month-col' }, [
+    el('span', { class: 'month-bar', style: `height:${Math.max(amount ? 4 : 0, (amount / max) * 100)}%`, title: `${MONTHS[i]}: ${formatMoney(amount, currency)}` }),
+    el('span', { class: 'month-label', text: MONTHS[i] }),
+  ])));
+
+  const brands = new Map();
+  for (const d of inMain) brands.set(d.brand, (brands.get(d.brand) || 0) + d.amount);
+  const brandRows = [...brands].sort((a, b) => b[1] - a[1]).slice(0, 8);
+  const brandMax = Math.max(1, ...brandRows.map(([, v]) => v));
+
+  const exportButton = el('button', { type: 'button', class: 'button-secondary', text: `Download ${year} spreadsheet (CSV)` });
+  exportButton.addEventListener('click', () => exportIncome(year));
+
+  incomeBody.replaceChildren(
+    el('div', { class: 'view-stats deal-stats' }, [
+      card(moneyTotal(paid), `Earned in ${year}`),
+      card(String(paid.length), paid.length === 1 ? 'Paid deal' : 'Paid deals'),
+      card(formatMoney(Math.round(inMain.reduce((s, d) => s + d.amount, 0) / Math.max(1, inMain.length)), currency), otherCurrencies.length ? `Average deal (${currency})` : 'Average deal'),
+      card(moneyTotal(owed), 'Still owed to you'),
+    ]),
+    el('h3', { class: 'rates-heading', text: `By month${otherCurrencies.length ? ` (${currency} only)` : ''}` }),
+    chart,
+    el('h3', { class: 'rates-heading', text: 'Top brands' }),
+    el('div', { class: 'stat-list' }, brandRows.map(([brand, amount]) => el('div', { class: 'bar-row' }, [
+      el('span', { class: 'bar-label', text: brand, title: brand }),
+      el('span', { class: 'bar' }, [el('span', { style: `width:${(amount / brandMax) * 100}%` })]),
+      el('span', { class: 'bar-value', text: formatMoney(amount, currency) }),
+    ]))),
+    el('div', { class: 'actions' }, [exportButton]),
+    el('p', { class: 'small muted', text: 'Counts deals marked Paid, by the date they were paid. Not tax advice: share the spreadsheet with your accountant, and remember platform payouts (ads, subs, donations) aren\'t included.' }),
+  );
+}
+
+incomeYear.addEventListener('change', renderIncome);
 
 // Pitch templates (Pro): emails filled in from the creator's own stats
 

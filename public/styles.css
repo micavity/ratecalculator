@@ -1746,3 +1746,11 @@ html[data-kit-style="gradient"] body {
 .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #e11d48; animation: live-pulse 1.6s infinite; }
 @keyframes live-pulse { 50% { opacity: 0.3; } }
 @media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }
+
+/* Ultra income report */
+
+.month-chart { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 4px; height: 140px; margin-bottom: 8px; }
+.month-col { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; min-width: 0; }
+.month-bar { width: 100%; max-width: 32px; border-radius: 6px 6px 2px 2px; background: var(--accent); }
+.month-label { font-size: 0.7rem; color: var(--muted); }
+#incomePanel .section-head select { width: auto; }
