@@ -74,10 +74,20 @@ export async function getTwitchUser(env, token) {
   };
 }
 
-// Without extra scopes Twitch still returns the follower total
+// Without extra scopes Twitch still returns the follower total. Also keeps
+// the most-viewed clips of the last 28 days, for Ultra's auto-featured videos.
 export async function getTwitchStats(env, token, broadcasterId) {
-  const data = await helix(env, token, `/channels/followers?broadcaster_id=${encodeURIComponent(broadcasterId)}&first=1`);
-  return { followers: data.total ?? 0 };
+  const id = encodeURIComponent(broadcasterId);
+  const since = new Date(Date.now() - 28 * 86400000).toISOString();
+  const [followers, clips] = await Promise.all([
+    helix(env, token, `/channels/followers?broadcaster_id=${id}&first=1`),
+    helix(env, token, `/clips?broadcaster_id=${id}&started_at=${encodeURIComponent(since)}&first=6`)
+      .catch(() => ({ data: [] })),
+  ]);
+  const topClips = (clips.data || [])
+    .map((c) => ({ id: c.id, title: c.title || '', views: c.view_count ?? 0, publishedAt: c.created_at || null, url: c.url }))
+    .sort((a, b) => b.views - a.views);
+  return { followers: followers.total ?? 0, topClips };
 }
 
 // Public clip and VOD details, looked up by ID
@@ -118,4 +128,20 @@ export async function searchGames(env, token, query, first = 8) {
   const games = await realGames(env, token, ids);
   // Keep Twitch's ordering (best match first)
   return ids.map((id) => games.find((g) => g.id === id)).filter(Boolean);
+}
+
+// Whether a channel is live right now. Kept for 2 minutes per Worker
+// instance, so busy kits don't ask Twitch on every view.
+const liveCache = new Map();
+const LIVE_CACHE_MS = 120000;
+
+export async function getLiveStream(env, broadcasterId) {
+  const cached = liveCache.get(broadcasterId);
+  if (cached && cached.at > Date.now() - LIVE_CACHE_MS) return cached.stream;
+  const { data } = await helix(env, await twitchAppToken(env), `/streams?user_id=${encodeURIComponent(broadcasterId)}`);
+  const s = data?.[0];
+  const stream = s?.type === 'live' ? { game: s.game_name || '', title: s.title || '', viewers: s.viewer_count ?? null } : null;
+  if (liveCache.size > 5000) liveCache.clear();
+  liveCache.set(broadcasterId, { at: Date.now(), stream });
+  return stream;
 }

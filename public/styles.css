@@ -1725,3 +1725,24 @@ html[data-kit-style="gradient"] body {
   font-weight: 700;
   letter-spacing: 0.02em;
 }
+
+/* Ultra: "Live now" badge on kits */
+
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(225, 29, 72, 0.12);
+  border: 1px solid rgba(225, 29, 72, 0.5);
+  color: #e11d48;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: #e11d48; animation: live-pulse 1.6s infinite; }
+@keyframes live-pulse { 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) { .live-dot { animation: none; } }

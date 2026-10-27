@@ -661,6 +661,10 @@ function renderPlan() {
   bar.classList.toggle('plan-bar-essential', limits.essential);
 
   document.querySelectorAll('[data-essential-panel]').forEach((panel) => panel.classList.toggle('locked', !limits.essential));
+  form.querySelectorAll('[data-ultra]').forEach((group) => {
+    group.classList.toggle('locked', !limits.ultra);
+    group.querySelectorAll('input').forEach((control) => { control.disabled = !limits.ultra; });
+  });
   form.querySelectorAll('[data-essential]').forEach((group) => {
     group.classList.toggle('locked', !limits.essential);
     if (!limits.essential) group.querySelectorAll('input, select, textarea, button').forEach((control) => { control.disabled = true; });

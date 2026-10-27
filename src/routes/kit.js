@@ -3,8 +3,22 @@ import { getSessionUser } from '../lib/session.js';
 import { RESERVED_SLUGS, getConnections, refreshStats } from '../lib/users.js';
 import { recordVisit } from '../lib/analytics.js';
 import { hasPlan } from '../lib/plans.js';
+import { twitchConfigured, getLiveStream } from '../lib/twitch.js';
 import { applyVersion } from '../lib/versions.js';
 import { renderKit, renderNotFound } from '../lib/kit.js';
+
+// Ultra kits show a "Live now" badge while the creator streams on Twitch.
+// Never holds the kit up for long: anything slower than a second is skipped.
+async function liveStatus(env, user, connections) {
+  if (!connections.twitch || !hasPlan(user, 'ultra') || !twitchConfigured(env)) return null;
+  const timeout = new Promise((resolve) => setTimeout(() => resolve(null), 1000));
+  try {
+    return await Promise.race([getLiveStream(env, connections.twitch.providerId), timeout]);
+  } catch (err) {
+    console.error('Live check failed:', err.message);
+    return null;
+  }
+}
 
 // Public media kits live at creatorgg.com/<slug>, and kit versions
 // (Essential) at creatorgg.com/<slug>/<version>
@@ -36,6 +50,7 @@ export async function onRequestGet(context) {
   }
 
   const connections = await getConnections(env, user.id);
+  const live = await liveStatus(env, user, connections);
   // Refresh stale stats and count the view in the background
   context.waitUntil(refreshStats(env, user.id));
   context.waitUntil(recordVisit(env, request, user.id, viewer, linkId).catch((err) => console.error('View count failed:', err.message)));
@@ -46,5 +61,6 @@ export async function onRequestGet(context) {
     viewer,
     print: url.searchParams.has('print'),
     path: `/${slug}${versionKey ? `/${versionKey}` : ''}`,
+    live,
   }));
 }

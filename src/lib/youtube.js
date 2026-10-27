@@ -9,6 +9,7 @@ const SHORT_MAX_SECONDS = 180;
 // Very new videos haven't collected their views yet
 const MIN_AGE_MS = 3 * 86400 * 1000;
 const SAMPLE_SIZE = 10;
+const RECENT_MS = 28 * 86400 * 1000;
 
 export function youtubeConfigured(env) {
   return Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.YOUTUBE_API_KEY);
@@ -101,6 +102,21 @@ export function computeYouTubeStats(channel, videoItems, now = Date.now()) {
       comments: Number(v.statistics.commentCount) || 0,
     }));
 
+  // Most-viewed uploads of the last 28 days, for Ultra's auto-featured videos
+  const topRecent = videoItems
+    .filter((v) => !v.liveStreamingDetails || v.liveStreamingDetails.actualEndTime)
+    .filter((v) => now - Date.parse(v.snippet.publishedAt) <= RECENT_MS)
+    .map((v) => ({
+      id: v.id,
+      title: v.snippet.title || '',
+      views: Number(v.statistics.viewCount) || 0,
+      likes: Number(v.statistics.likeCount) || 0,
+      comments: Number(v.statistics.commentCount) || 0,
+      publishedAt: v.snippet.publishedAt,
+    }))
+    .sort((a, b) => b.views - a.views)
+    .slice(0, 6);
+
   const long = summarize(videos.filter((v) => v.seconds > SHORT_MAX_SECONDS).slice(0, SAMPLE_SIZE));
   const shorts = summarize(videos.filter((v) => v.seconds <= SHORT_MAX_SECONDS).slice(0, SAMPLE_SIZE));
   const stats = channel.statistics;
@@ -112,6 +128,7 @@ export function computeYouTubeStats(channel, videoItems, now = Date.now()) {
     avgViews: long.avg,
     avgShortsViews: shorts.avg,
     engagement: long.engagement ?? shorts.engagement,
+    topRecent,
   };
 }
 

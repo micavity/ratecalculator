@@ -69,6 +69,27 @@ function featuredSection(featured, host, connections) {
   </section>`;
 }
 
+// Pinned videos first; Ultra creators who turned on auto-featuring then get
+// their most-viewed videos and clips of the last 28 days in the open slots
+export function featuredVideos(user, connections, limits) {
+  const pinned = parseJson(user.featured, []).slice(0, limits.featured);
+  if (!limits.ultra || !user.auto_featured) return pinned;
+  const yt = connections.youtube;
+  const tw = connections.twitch;
+  const auto = [
+    ...(yt?.stats.topRecent || []).map((v) => ({
+      type: 'youtube', id: v.id, url: `https://www.youtube.com/watch?v=${v.id}`,
+      stats: { title: v.title, views: v.views, likes: v.likes, comments: v.comments, publishedAt: v.publishedAt, ownerId: yt.providerId },
+    })),
+    ...(tw?.stats.topClips || []).map((c) => ({
+      type: 'twitch-clip', id: c.id, url: c.url,
+      stats: { title: c.title, views: c.views, likes: null, comments: null, publishedAt: c.publishedAt, ownerId: tw.providerId },
+    })),
+  ].sort((a, b) => b.stats.views - a.stats.views);
+  const seen = new Set(pinned.map((v) => `${v.type}:${v.id}`));
+  return [...pinned, ...auto.filter((v) => !seen.has(`${v.type}:${v.id}`))].slice(0, limits.featured);
+}
+
 function brandsSection(brands) {
   if (!brands.length) return '';
   const items = brands.map((b) => (b.url
@@ -172,7 +193,7 @@ function customRatesSection(rateCard, packages) {
  * Renders a public media kit. `user` may already have a kit version's
  * overrides applied; `path` is the kit's own path (with the version, if any).
  */
-export function renderKit(user, connections, { origin, host, viewer, print, path = `/${user.slug}` }) {
+export function renderKit(user, connections, { origin, host, viewer, print, path = `/${user.slug}`, live = null }) {
   const limits = planLimits(user);
   const essential = limits.essential;
   const hideBranding = essential && Boolean(user.hide_branding);
@@ -224,7 +245,7 @@ export function renderKit(user, connections, { origin, host, viewer, print, path
     platforms: `${audienceTotal ? `<p class="audience"><strong>${e(count(audienceTotal))}</strong> total followers across platforms</p>` : ''}
     <div class="kit-grid">${cards || '<p class="empty">No stats yet.</p>'}</div>`,
     audience: audienceSection(parseJson(user.audience, {})),
-    featured: featuredSection(parseJson(user.featured, []).slice(0, limits.featured), host, connections),
+    featured: featuredSection(featuredVideos(user, connections, limits), host, connections),
     brands: brandsSection(parseJson(user.brands, [])),
     rates,
   };
@@ -278,6 +299,7 @@ export function renderKit(user, connections, { origin, host, viewer, print, path
       ${avatar}
       <div class="kit-intro">
         <h1>${e(user.display_name)}${limits.ultra ? ' <span class="pro-creator" title="Runs sponsorships professionally on CreatorGG Ultra">★ Pro Creator</span>' : ''}</h1>
+        ${live && connections.twitch ? `<a class="live-badge no-print" href="${e(connections.twitch.url)}" target="_blank" rel="noopener"><span class="live-dot" aria-hidden="true"></span>Live now on Twitch${live.game ? ` · ${e(live.game)}` : ''}</a>` : ''}
         ${user.bio ? `<p class="bio">${e(user.bio)}</p>` : ''}
         ${games ? `<ul class="games" aria-label="Games and topics">${games}</ul>` : ''}
         ${contact}

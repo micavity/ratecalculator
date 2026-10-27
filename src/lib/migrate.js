@@ -241,6 +241,8 @@ export const MIGRATIONS = [
     'CREATE INDEX IF NOT EXISTS proposals_user ON proposals (user_id, created_at)',
     'CREATE INDEX IF NOT EXISTS proposals_deal ON proposals (deal_id)',
   ],
+  // 11: Ultra auto-featured videos
+  ['ALTER TABLE users ADD COLUMN auto_featured INTEGER NOT NULL DEFAULT 0'],
 ];
 
 let ready = null;

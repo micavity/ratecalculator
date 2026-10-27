@@ -284,6 +284,7 @@ export function profileFields(user) {
     region: user.region,
     focus: user.focus,
     showRates: Boolean(user.show_rates),
+    autoFeatured: Boolean(user.auto_featured),
     twitchAvgViewers: user.twitch_avg_viewers,
     twitchHours: user.twitch_hours,
     tiktokHandle: user.tiktok_handle,
@@ -347,6 +348,7 @@ export function validateProfile(body) {
   values.region = body.region in REGION_MULTIPLIER ? body.region : 'mixed';
   values.focus = body.focus in FOCUS_MULTIPLIER ? body.focus : 'gaming';
   values.show_rates = body.showRates ? 1 : 0;
+  values.auto_featured = body.autoFeatured ? 1 : 0;
 
   const numbers = [
     ['twitch_avg_viewers', 'twitchAvgViewers', { min: 0, max: 10_000_000, integer: true }],
@@ -429,9 +431,11 @@ export function applyPlanLimits(values, user) {
       error: `Your plan includes up to ${limits.featured} featured videos.${limits.essential ? '' : ' Essential includes 6.'}`,
     };
   }
-  if (limits.essential) return { values };
-
   const allowed = { ...values };
+  // Ultra settings stay as they were on other plans
+  if (!limits.ultra) delete allowed.auto_featured;
+  if (limits.essential) return { values: allowed };
+
   for (const column of ESSENTIAL_COLUMNS) delete allowed[column];
   if (allowed.theme in ESSENTIAL_THEMES) delete allowed.theme;
   return { values: allowed };
