@@ -57,7 +57,7 @@ function saveConnection(env, userId, provider, account, stats) {
 }
 
 // Per-creator tables, besides users, connections and sessions
-export const USER_DATA_TABLES = ['kit_views', 'kit_sources', 'kit_countries', 'link_events', 'tracked_links', 'kit_versions', 'stat_snapshots', 'deals', 'invoices', 'proposals', 'booking_slots'];
+export const USER_DATA_TABLES = ['kit_views', 'kit_sources', 'kit_countries', 'link_events', 'tracked_links', 'kit_versions', 'stat_snapshots', 'deals', 'invoices', 'proposals', 'booking_slots', 'campaign_reports'];
 
 // Profile fields copied from the merged-away profile when the kept one is empty
 const MERGE_FIELDS = [
@@ -131,6 +131,7 @@ async function mergeUsers(env, aId, bId, provider, account, stats) {
   statements.push(env.DB.prepare('UPDATE invoices SET user_id = ? WHERE user_id = ?').bind(keep.id, drop.id));
   statements.push(env.DB.prepare('UPDATE proposals SET user_id = ? WHERE user_id = ?').bind(keep.id, drop.id));
   statements.push(env.DB.prepare('UPDATE booking_slots SET user_id = ? WHERE user_id = ?').bind(keep.id, drop.id));
+  statements.push(env.DB.prepare('UPDATE campaign_reports SET user_id = ? WHERE user_id = ?').bind(keep.id, drop.id));
 
   // Analytics, links and versions on the merged-away profile go with it
   for (const table of USER_DATA_TABLES) {

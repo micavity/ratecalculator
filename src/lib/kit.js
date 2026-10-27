@@ -33,7 +33,7 @@ function platformCard(name, link, verified, stats) {
   </section>`;
 }
 
-function embedUrl(video, host) {
+export function embedUrl(video, host) {
   if (video.type === 'youtube') return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.id)}`;
   if (video.type === 'twitch-clip') return `https://clips.twitch.tv/embed?clip=${encodeURIComponent(video.id)}&parent=${encodeURIComponent(host)}&autoplay=false`;
   return `https://player.twitch.tv/?video=${encodeURIComponent(video.id)}&parent=${encodeURIComponent(host)}&autoplay=false`;

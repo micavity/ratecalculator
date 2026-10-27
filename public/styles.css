@@ -1768,3 +1768,12 @@ html[data-kit-style="gradient"] body {
 .booking-add { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.5fr) auto; gap: 8px; align-items: center; margin-bottom: 12px; }
 .booking-add input, .booking-add select { margin: 0; }
 @media (max-width: 560px) { .booking-add { grid-template-columns: 1fr 1fr; } }
+
+/* Ultra campaign reports */
+
+.report-title { margin: 4px 0; font-size: 1.6rem; }
+.report-items { display: grid; gap: 16px; margin-bottom: 12px; }
+.report-item { display: grid; grid-template-columns: minmax(0, 280px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.report-item p { margin: 0 0 4px; }
+@media (max-width: 640px) { .report-item { grid-template-columns: 1fr; } }
+@media print { .report-item { grid-template-columns: 1fr; } }

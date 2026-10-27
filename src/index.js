@@ -23,11 +23,13 @@ import * as games from './routes/games.js';
 import * as invoices from './routes/invoices.js';
 import * as proposals from './routes/proposals.js';
 import * as booking from './routes/booking.js';
+import * as reports from './routes/reports.js';
 import { ensureSchema } from './lib/migrate.js';
 import { refreshStaleUsers } from './lib/users.js';
 import { pruneOldEvents } from './lib/analytics.js';
 import { takeSnapshots } from './lib/snapshots.js';
 import { backfillGameArt } from './lib/games.js';
+import { refreshStaleReports } from './lib/reports.js';
 
 // [method, path pattern, handler]. ":name" matches one path segment.
 const ROUTES = [
@@ -68,6 +70,10 @@ const ROUTES = [
   ['PUT', '/api/booking/slots/:id', booking.slotPut],
   ['DELETE', '/api/booking/slots/:id', booking.slotDelete],
   ['POST', '/book/:slug/request', booking.requestPost],
+  ['GET', '/api/reports', reports.onRequestGet],
+  ['POST', '/api/reports', reports.onRequestPost],
+  ['PUT', '/api/reports/:id', reports.onRequestPut],
+  ['DELETE', '/api/reports/:id', reports.onRequestDelete],
   ['POST', '/api/stripe/webhook', billing.webhook],
   ['GET', '/api/referrals', referrals.onRequestGet],
   ['PUT', '/api/referrals', referrals.onRequestPut],
@@ -87,6 +93,7 @@ const ROUTES = [
   ['GET', '/i/:id', invoices.page],
   ['GET', '/p/:id', proposals.page],
   ['GET', '/book/:slug', booking.page],
+  ['GET', '/r/:id', reports.page],
   ['GET', '/:slug', kit.onRequestGet],
   ['GET', '/:slug/:version', kit.onRequestGet],
 ];
@@ -135,5 +142,6 @@ export default {
     ctx.waitUntil(pruneOldEvents(env));
     ctx.waitUntil(takeSnapshots(env).catch((err) => console.error('Snapshots failed:', err.message)));
     ctx.waitUntil(backfillGameArt(env).catch((err) => console.error('Game art backfill failed:', err.message)));
+    ctx.waitUntil(refreshStaleReports(env).catch((err) => console.error('Report refresh failed:', err.message)));
   },
 };

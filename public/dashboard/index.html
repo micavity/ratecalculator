@@ -239,6 +239,44 @@
         <div id="invoicesBody"></div>
       </section>
 
+      <section class="panel pro-panel" id="reportsPanel">
+        <div class="section-head">
+          <h2>Campaign reports <span class="plan-pill">Ultra</span></h2>
+          <button type="button" id="newReport">Create report</button>
+        </div>
+        <p class="small muted">Show brands how their campaign did. Add the links to what you posted, and the report shows live views, likes and comments straight from YouTube and Twitch.</p>
+        <div id="reportsBody"></div>
+      </section>
+
+      <dialog class="deal-dialog" id="reportDialog" aria-labelledby="reportDialogTitle">
+        <form id="reportForm" novalidate>
+          <div class="section-head">
+            <h2 id="reportDialogTitle">Create report</h2>
+            <button type="button" class="button-link" id="closeReport" aria-label="Close">Close</button>
+          </div>
+          <p class="alert alert-error" id="reportError" hidden></p>
+          <div class="field-row">
+            <label>Brand <input type="text" name="brand" maxlength="80" required list="brandSuggestions"></label>
+            <label>Title <span class="opt">optional</span><input type="text" name="title" maxlength="100" placeholder="e.g. Headset launch results"></label>
+          </div>
+          <label>Links to what you posted
+            <textarea name="links" rows="4" placeholder="https://youtube.com/watch?v=…&#10;https://www.twitch.tv/videos/…&#10;https://clips.twitch.tv/…"></textarea>
+            <small>One per line. YouTube videos and Shorts, Twitch VODs and clips. Up to 12.</small>
+          </label>
+          <div class="field-row">
+            <label>Link clicks <span class="opt">optional</span><input type="number" name="clicks" min="0" step="1" inputmode="numeric"></label>
+            <label>Code uses / sales <span class="opt">optional</span><input type="number" name="conversions" min="0" step="1" inputmode="numeric"></label>
+          </div>
+          <label>Summary <span class="opt">optional</span>
+            <textarea name="summary" rows="3" maxlength="1500" placeholder="e.g. Chat loved the giveaway. 40+ people asked about the headset during the stream."></textarea>
+          </label>
+          <div class="save-bar deal-actions">
+            <button type="submit" id="saveReport">Save report</button>
+            <button type="button" class="button-link danger-link" id="deleteReport" hidden>Delete report</button>
+          </div>
+        </form>
+      </dialog>
+
       <section class="panel pro-panel" id="bookingPanel">
         <h2>Book me page <span class="plan-pill">Ultra</span></h2>
         <p class="small muted">List your open sponsorship dates. Brands pick one and send a request, which shows up here as a Negotiating deal. Your kit gets a "Book me" button.</p>

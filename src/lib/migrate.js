@@ -258,6 +258,25 @@ export const MIGRATIONS = [
     )`,
     'CREATE INDEX IF NOT EXISTS booking_slots_user ON booking_slots (user_id, day)',
   ],
+  // 13: Ultra campaign reports with live stats for brands
+  [
+    `CREATE TABLE IF NOT EXISTS campaign_reports (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      deal_id TEXT,
+      brand TEXT NOT NULL,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      clicks INTEGER,
+      conversions INTEGER,
+      summary TEXT,
+      stats_updated_at INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS campaign_reports_user ON campaign_reports (user_id, created_at)',
+    'CREATE INDEX IF NOT EXISTS campaign_reports_stale ON campaign_reports (stats_updated_at)',
+  ],
 ];
 
 let ready = null;

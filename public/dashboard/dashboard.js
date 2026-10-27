@@ -1539,6 +1539,15 @@ function dealRow(d) {
     });
     side.push(button);
   }
+  if (state.limits.ultra && ['delivered', 'paid'].includes(d.stage)) {
+    const report = reports.find((r) => r.dealId === d.id);
+    const button = el('button', { type: 'button', class: 'button-secondary deal-invoice', text: report ? 'View report' : 'Report' });
+    button.addEventListener('click', () => {
+      if (report) window.open(`/r/${report.id}`, '_blank', 'noopener');
+      else openReport(null, d);
+    });
+    side.push(button);
+  }
   if (['agreed', 'delivered', 'paid'].includes(d.stage) || d.invoice) {
     const invoice = d.invoice && invoices.find((i) => i.id === d.invoice.id);
     const button = el('button', { type: 'button', class: 'button-secondary deal-invoice', text: invoice ? 'View invoice' : 'Invoice' });
@@ -1614,6 +1623,7 @@ async function loadDeals() {
     renderDealsLocked(data.saved);
     loadInvoices();
     loadProposals();
+    loadReports();
     setupPitches();
     renderIncome();
     loadBooking();
@@ -1621,7 +1631,7 @@ async function loadDeals() {
   }
   deals = data.deals;
   dealCurrencies = data.currencies;
-  await Promise.all([loadInvoices(), loadProposals()]);
+  await Promise.all([loadInvoices(), loadProposals(), loadReports()]);
   renderDeals();
   renderBrandSuggestions();
   setupPitches();
@@ -2247,6 +2257,124 @@ document.getElementById('deleteInvoice').addEventListener('click', async () => {
   } catch (err) {
     invoiceError.textContent = err.message;
     invoiceError.hidden = false;
+  }
+});
+
+// Campaign reports (Ultra)
+
+const reportsPanel = document.getElementById('reportsPanel');
+const reportsBody = document.getElementById('reportsBody');
+const reportDialog = document.getElementById('reportDialog');
+const reportForm = document.getElementById('reportForm');
+const reportError = document.getElementById('reportError');
+let reports = [];
+let editingReport = null;
+let reportDealId = '';
+
+function openReport(report, deal = null) {
+  editingReport = report;
+  reportDealId = report ? report.dealId : deal?.id || '';
+  const f = reportForm.elements;
+  reportForm.reset();
+  reportForm.querySelectorAll('.invalid').forEach((input) => input.classList.remove('invalid'));
+  reportError.hidden = true;
+  f.brand.value = report?.brand || deal?.brand || '';
+  f.title.value = report?.title || '';
+  f.links.value = report?.links || '';
+  f.clicks.value = report?.clicks ?? '';
+  f.conversions.value = report?.conversions ?? '';
+  f.summary.value = report?.summary || '';
+  document.getElementById('reportDialogTitle').textContent = report ? 'Edit report' : deal ? `Report for ${deal.brand}` : 'Create report';
+  document.getElementById('deleteReport').hidden = !report;
+  reportDialog.showModal();
+}
+
+function reportRow(r) {
+  const view = el('a', { class: 'button button-secondary', href: `/r/${r.id}`, target: '_blank', rel: 'noopener', text: 'View' });
+  const copy = el('button', { type: 'button', class: 'button-secondary', text: 'Copy link' });
+  copy.addEventListener('click', () => copyText(`${location.origin}/r/${r.id}`, copy));
+  const edit = el('button', { type: 'button', class: 'button-link', text: 'Edit' });
+  edit.addEventListener('click', () => openReport(r));
+  const t = r.totals;
+  const parts = [`${compact.format(t.views)} views`];
+  if (t.likes) parts.push(`${compact.format(t.likes)} likes`);
+  if (r.clicks !== null) parts.push(`${number.format(r.clicks)} clicks`);
+  parts.push(`${r.content.length} piece${r.content.length === 1 ? '' : 's'} of content`);
+  return el('div', { class: 'invoice-row' }, [
+    el('div', { class: 'invoice-row-main' }, [
+      el('div', { class: 'deal-title' }, [el('strong', { text: r.title.includes(r.brand) ? r.title : `${r.brand}: ${r.title}` })]),
+      el('p', { class: 'small muted', text: parts.join(' · ') }),
+    ]),
+    el('div', { class: 'kit-link-actions invoice-actions' }, [view, copy, edit]),
+  ]);
+}
+
+async function loadReports() {
+  reportsPanel.classList.toggle('locked', !state.limits.ultra);
+  let data;
+  try {
+    data = await api('/api/reports');
+  } catch (err) {
+    reportsBody.replaceChildren(el('p', { class: 'small muted', text: err.message }));
+    return;
+  }
+  if (data.locked) {
+    reportsBody.replaceChildren(el('div', { class: 'teaser' }, [
+      el('p', { text: 'Ultra builds campaign reports for brands: add the links to your sponsored videos and streams, and the report shows live views, likes and comments, plus your clicks and code uses. Brands love proof, and it gets you rebooked.' }),
+      data.saved ? el('p', { class: 'small', text: `You have ${data.saved} saved report${data.saved === 1 ? '' : 's'}. Links you've already sent keep working.` }) : '',
+    ]));
+    return;
+  }
+  reports = data.reports;
+  reportsBody.replaceChildren(reports.length
+    ? el('div', { class: 'invoice-list' }, reports.map(reportRow))
+    : el('p', { class: 'small muted', text: 'No reports yet. Use "Create report", or the Report button on a delivered or paid deal.' }));
+}
+
+document.getElementById('newReport').addEventListener('click', () => openReport(null));
+document.getElementById('closeReport').addEventListener('click', () => reportDialog.close());
+
+reportForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const f = reportForm.elements;
+  const body = { dealId: reportDealId };
+  for (const key of ['brand', 'title', 'links', 'clicks', 'conversions', 'summary']) body[key] = f[key].value.trim();
+  const button = document.getElementById('saveReport');
+  button.disabled = true;
+  button.textContent = 'Getting live stats…';
+  reportForm.querySelectorAll('.invalid').forEach((input) => input.classList.remove('invalid'));
+  try {
+    const result = await api(editingReport ? `/api/reports/${editingReport.id}` : '/api/reports', {
+      method: editingReport ? 'PUT' : 'POST',
+      body: JSON.stringify(body),
+    });
+    reportDialog.close();
+    await loadDeals();
+    if (!editingReport) {
+      const copy = el('button', { type: 'button', class: 'button-secondary', text: 'Copy link' });
+      copy.addEventListener('click', () => copyText(`${location.origin}/r/${result.id}`, copy));
+      showBanner(`Report saved. Send ${body.brand} the link: `, 'success');
+      banner.append(copy);
+    }
+  } catch (err) {
+    reportError.textContent = err.message;
+    reportError.hidden = false;
+    if (err.field && f[err.field]) f[err.field].classList.add('invalid');
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Save report';
+  }
+});
+
+document.getElementById('deleteReport').addEventListener('click', async () => {
+  if (!editingReport || !confirm(`Delete this report for ${editingReport.brand}? Its link will stop working.`)) return;
+  try {
+    await api(`/api/reports/${editingReport.id}`, { method: 'DELETE' });
+    reportDialog.close();
+    loadDeals();
+  } catch (err) {
+    reportError.textContent = err.message;
+    reportError.hidden = false;
   }
 });
 
