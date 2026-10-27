@@ -14,7 +14,7 @@ export const RESERVED_SLUGS = new Set([
   'about', 'admin', 'affiliate', 'affiliates', 'api', 'app', 'assets', 'auth', 'blog', 'brands', 'calculator',
   'book', 'contact', 'creatorgg', 'faq', 'features', 'guides', 'home', 'vendor',
   'dashboard', 'help', 'index', 'kit', 'login', 'logout', 'pricing', 'privacy', 'settings',
-  'signup', 'static', 'support', 'terms', 'u', 'www',
+  'signup', 'static', 'support', 'team', 'terms', 'u', 'www',
 ]);
 
 const SLUG_PATTERN = /^[a-z0-9_-]{3,30}$/;
@@ -132,6 +132,11 @@ async function mergeUsers(env, aId, bId, provider, account, stats) {
   statements.push(env.DB.prepare('UPDATE proposals SET user_id = ? WHERE user_id = ?').bind(keep.id, drop.id));
   statements.push(env.DB.prepare('UPDATE booking_slots SET user_id = ? WHERE user_id = ?').bind(keep.id, drop.id));
   statements.push(env.DB.prepare('UPDATE campaign_reports SET user_id = ? WHERE user_id = ?').bind(keep.id, drop.id));
+  // A manager follows the kept profile, unless it already has one
+  statements.push(env.DB.prepare('UPDATE OR IGNORE team_members SET creator_id = ? WHERE creator_id = ? AND NOT EXISTS (SELECT 1 FROM team_members WHERE creator_id = ?)').bind(keep.id, drop.id, keep.id));
+  statements.push(env.DB.prepare('UPDATE manager_sessions SET creator_id = ? WHERE creator_id = ?').bind(keep.id, drop.id));
+  statements.push(env.DB.prepare('DELETE FROM team_members WHERE creator_id = ?').bind(drop.id));
+  statements.push(env.DB.prepare('DELETE FROM team_invites WHERE creator_id = ?').bind(drop.id));
 
   // Analytics, links and versions on the merged-away profile go with it
   for (const table of USER_DATA_TABLES) {

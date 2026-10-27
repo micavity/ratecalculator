@@ -4,7 +4,7 @@ import { stripeConfigured } from '../lib/stripe.js';
 import { REFERRAL, ensureReferralCode, ensurePromotionCode, referralStats } from '../lib/referrals.js';
 
 export async function onRequestGet({ request, env, waitUntil }) {
-  const user = await getSessionUser(request, env);
+  const user = await getSessionUser(request, env, { creatorOnly: true });
   if (!user) return json({ error: 'Not signed in' }, 401);
   const code = await ensureReferralCode(env, user);
   // Set up the matching Stripe promotion code in the background
@@ -22,7 +22,7 @@ export async function onRequestGet({ request, env, waitUntil }) {
 
 export async function onRequestPut({ request, env }) {
   if (!sameOrigin(request)) return json({ error: 'Bad origin' }, 403);
-  const user = await getSessionUser(request, env);
+  const user = await getSessionUser(request, env, { creatorOnly: true });
   if (!user) return json({ error: 'Not signed in' }, 401);
   const body = await request.json().catch(() => ({}));
   const email = String(body.payoutEmail ?? '').trim().slice(0, 254);

@@ -24,6 +24,7 @@ import * as invoices from './routes/invoices.js';
 import * as proposals from './routes/proposals.js';
 import * as booking from './routes/booking.js';
 import * as reports from './routes/reports.js';
+import * as team from './routes/team.js';
 import { ensureSchema } from './lib/migrate.js';
 import { refreshStaleUsers } from './lib/users.js';
 import { pruneOldEvents } from './lib/analytics.js';
@@ -74,6 +75,16 @@ const ROUTES = [
   ['POST', '/api/reports', reports.onRequestPost],
   ['PUT', '/api/reports/:id', reports.onRequestPut],
   ['DELETE', '/api/reports/:id', reports.onRequestDelete],
+  ['GET', '/api/team', team.onRequestGet],
+  ['POST', '/api/team/invite', team.invitePost],
+  ['DELETE', '/api/team/invite', team.inviteDelete],
+  ['PUT', '/api/team/manager', team.managerPut],
+  ['DELETE', '/api/team/manager', team.managerDelete],
+  ['POST', '/api/passkeys/register/options', team.registerOptions],
+  ['POST', '/api/passkeys/register/verify', team.registerVerify],
+  ['POST', '/api/passkeys/login/options', team.loginOptions],
+  ['POST', '/api/passkeys/login/verify', team.loginVerify],
+  ['GET', '/team/join/:token', team.joinPage],
   ['POST', '/api/stripe/webhook', billing.webhook],
   ['GET', '/api/referrals', referrals.onRequestGet],
   ['PUT', '/api/referrals', referrals.onRequestPut],

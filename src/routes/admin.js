@@ -14,13 +14,13 @@ function isAdmin(env, user) {
 
 async function requireAdmin(request, env, { write = false } = {}) {
   if (write && !sameOrigin(request)) return { response: json({ error: 'Bad origin' }, 403) };
-  const user = await getSessionUser(request, env);
+  const user = await getSessionUser(request, env, { creatorOnly: true });
   if (!isAdmin(env, user)) return { response: json({ error: 'Not found' }, 404) };
   return { user };
 }
 
 export async function page({ request, env, next }) {
-  const user = await getSessionUser(request, env);
+  const user = await getSessionUser(request, env, { creatorOnly: true });
   if (!isAdmin(env, user)) return next();
   return html(renderAdminPage());
 }

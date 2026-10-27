@@ -277,6 +277,52 @@ export const MIGRATIONS = [
     'CREATE INDEX IF NOT EXISTS campaign_reports_user ON campaign_reports (user_id, created_at)',
     'CREATE INDEX IF NOT EXISTS campaign_reports_stale ON campaign_reports (stats_updated_at)',
   ],
+  // 14: Ultra manager access, signed in with passkeys
+  [
+    `CREATE TABLE IF NOT EXISTS managers (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS passkeys (
+      id TEXT PRIMARY KEY,
+      manager_id TEXT NOT NULL REFERENCES managers(id) ON DELETE CASCADE,
+      public_key TEXT NOT NULL,
+      alg INTEGER NOT NULL,
+      sign_count INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      last_used_at INTEGER
+    )`,
+    'CREATE INDEX IF NOT EXISTS passkeys_manager ON passkeys (manager_id)',
+    `CREATE TABLE IF NOT EXISTS team_members (
+      creator_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      manager_id TEXT NOT NULL REFERENCES managers(id) ON DELETE CASCADE,
+      role TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      last_active_at INTEGER,
+      PRIMARY KEY (creator_id, manager_id)
+    )`,
+    'CREATE INDEX IF NOT EXISTS team_members_manager ON team_members (manager_id)',
+    `CREATE TABLE IF NOT EXISTS team_invites (
+      token_hash TEXT PRIMARY KEY,
+      creator_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      role TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      expires_at INTEGER NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS manager_sessions (
+      token_hash TEXT PRIMARY KEY,
+      manager_id TEXT NOT NULL REFERENCES managers(id) ON DELETE CASCADE,
+      creator_id TEXT NOT NULL,
+      expires_at INTEGER NOT NULL
+    )`,
+    `CREATE TABLE IF NOT EXISTS webauthn_challenges (
+      id TEXT PRIMARY KEY,
+      challenge TEXT NOT NULL,
+      data TEXT NOT NULL,
+      expires_at INTEGER NOT NULL
+    )`,
+  ],
 ];
 
 let ready = null;

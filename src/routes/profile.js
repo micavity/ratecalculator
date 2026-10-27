@@ -9,6 +9,7 @@ export async function onRequestPut({ request, env }) {
   if (!sameOrigin(request)) return json({ error: 'Bad origin' }, 403);
   const user = await getSessionUser(request, env);
   if (!user) return json({ error: 'Not signed in' }, 401);
+  if (user.manager?.role === 'deals') return json({ error: 'Your access is limited to deals, so you can\'t edit the kit.' }, 403);
 
   let body;
   try {

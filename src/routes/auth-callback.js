@@ -1,6 +1,6 @@
 import { PROVIDERS, STATE_COOKIE, callbackUrl } from '../lib/oauth.js';
 import { cookie, getCookie } from '../lib/http.js';
-import { createSession, getSessionUser } from '../lib/session.js';
+import { createSession, getSessionUser, clearManagerCookie } from '../lib/session.js';
 import { signInWithAccount } from '../lib/users.js';
 import { attributeSignup } from '../lib/referrals.js';
 import { NoChannelError } from '../lib/youtube.js';
@@ -13,7 +13,7 @@ export async function onRequestGet({ request, env, params }) {
   if (!provider) return new Response('Not found', { status: 404 });
 
   const url = new URL(request.url);
-  const currentUser = await getSessionUser(request, env);
+  const currentUser = await getSessionUser(request, env, { creatorOnly: true });
   const errorPage = currentUser ? '/dashboard/' : '/login/';
   const headers = new Headers({ 'set-cookie': cookie(STATE_COOKIE, '', 0) });
   const fail = (code) => {
@@ -30,7 +30,11 @@ export async function onRequestGet({ request, env, params }) {
   try {
     const { account, stats } = await provider.complete(env, code, callbackUrl(request, params.provider));
     const { userId, merged, created } = await signInWithAccount(env, params.provider, account, stats, currentUser);
-    if (!currentUser) headers.append('set-cookie', await createSession(env, userId));
+    if (!currentUser) {
+      headers.append('set-cookie', await createSession(env, userId));
+      // Signing in as a creator ends any manager session on this browser
+      headers.append('set-cookie', clearManagerCookie());
+    }
     // Credit whoever referred this brand-new creator
     const ref = getCookie(request, REF_COOKIE);
     if (created && ref) {

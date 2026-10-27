@@ -5,7 +5,7 @@ import { getSessionUser } from '../lib/session.js';
 // so the last one can't be removed.
 export async function onRequestDelete({ request, env, params }) {
   if (!sameOrigin(request)) return json({ error: 'Bad origin' }, 403);
-  const user = await getSessionUser(request, env);
+  const user = await getSessionUser(request, env, { creatorOnly: true });
   if (!user) return json({ error: 'Not signed in' }, 401);
 
   const { count } = await env.DB.prepare('SELECT COUNT(*) AS count FROM connections WHERE user_id = ?').bind(user.id).first();

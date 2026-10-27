@@ -36,6 +36,13 @@
       <p class="small muted">We only ask for read-only access. We never post anything or see your password.</p>
       <p class="small muted">By continuing, you agree to our <a href="/terms/">Terms of Service</a> and <a href="/privacy/">Privacy Policy</a>.</p>
     </section>
+
+    <section class="panel auth-panel manager-login">
+      <h2>Managers</h2>
+      <p class="small muted">Help run a creator's account? Sign in with the passkey you made when you accepted their invite.</p>
+      <button type="button" class="button-secondary" id="passkeyLogin">Sign in with a passkey</button>
+      <p class="alert alert-error" id="passkeyError" hidden></p>
+    </section>
   </main>
 
   <footer class="site-footer">
@@ -61,6 +68,23 @@
     }
     // Already signed in? Go straight to the dashboard
     fetch('/api/session').then((res) => res.json()).then((data) => { if (data.signedIn && !code) location.replace('/dashboard/'); }).catch(() => {});
+  </script>
+  <script type="module">
+    import { signInWithPasskey } from '/passkey.js';
+    const button = document.getElementById('passkeyLogin');
+    const error = document.getElementById('passkeyError');
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      error.hidden = true;
+      try {
+        await signInWithPasskey();
+        location.href = '/dashboard/';
+      } catch (err) {
+        error.textContent = err.message;
+        error.hidden = false;
+        button.disabled = false;
+      }
+    });
   </script>
   <script src="/nav.js" defer></script>
   <script>document.querySelectorAll(".year").forEach((el) => { el.textContent = new Date().getFullYear(); });</script>

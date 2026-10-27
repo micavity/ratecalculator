@@ -6,7 +6,7 @@ import { cancelSubscriptionNow } from '../lib/billing.js';
 // Permanently deletes the signed-in creator's profile and everything linked to it
 export async function onRequestDelete({ request, env }) {
   if (!sameOrigin(request)) return json({ error: 'Bad origin' }, 403);
-  const user = await getSessionUser(request, env);
+  const user = await getSessionUser(request, env, { creatorOnly: true });
   if (!user) return json({ error: 'Not signed in' }, 401);
 
   // Stop billing before the account goes away
@@ -21,6 +21,12 @@ export async function onRequestDelete({ request, env }) {
     env.DB.prepare("DELETE FROM commissions WHERE referrer_id = ? AND status != 'paid'").bind(user.id),
     ...USER_DATA_TABLES.map((table) => env.DB.prepare(`DELETE FROM ${table} WHERE user_id = ?`).bind(user.id)),
     env.DB.prepare('DELETE FROM connections WHERE user_id = ?').bind(user.id),
+    // Their manager goes too: managers only ever manage one creator
+    env.DB.prepare('DELETE FROM manager_sessions WHERE creator_id = ?').bind(user.id),
+    env.DB.prepare('DELETE FROM passkeys WHERE manager_id IN (SELECT manager_id FROM team_members WHERE creator_id = ?)').bind(user.id),
+    env.DB.prepare('DELETE FROM managers WHERE id IN (SELECT manager_id FROM team_members WHERE creator_id = ?)').bind(user.id),
+    env.DB.prepare('DELETE FROM team_members WHERE creator_id = ?').bind(user.id),
+    env.DB.prepare('DELETE FROM team_invites WHERE creator_id = ?').bind(user.id),
     env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(user.id),
     env.DB.prepare('DELETE FROM users WHERE id = ?').bind(user.id),
   ]);

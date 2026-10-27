@@ -1777,3 +1777,12 @@ html[data-kit-style="gradient"] body {
 .report-item p { margin: 0 0 4px; }
 @media (max-width: 640px) { .report-item { grid-template-columns: 1fr; } }
 @media print { .report-item { grid-template-columns: 1fr; } }
+
+/* Signed in as a manager: only the creator can do these */
+
+.manager-mode #billingPanel, .manager-mode #teamPanel, .manager-mode .danger-zone, .manager-mode .referral-panel,
+.manager-mode #planBar, .manager-mode #connections .button-link, .manager-mode #connections a.button { display: none; }
+.manager-deals #tab-edit, .manager-deals #tab-versions, .manager-deals #checklist { display: none !important; }
+.manager-bar { margin: 0; }
+.manager-login h2 { margin: 0 0 6px; font-size: 1.1rem; }
+.manager-login { margin-top: 16px; }

@@ -2739,6 +2739,126 @@ pitchBrand.addEventListener('change', () => {
 document.getElementById('copyPitch').addEventListener('click', (event) => copyText(pitchText.value, event.target));
 document.getElementById('copyPitchSubject').addEventListener('click', (event) => copyText(pitchSubject.value, event.target));
 
+// Manager access (Ultra)
+
+const teamPanel = document.getElementById('teamPanel');
+const teamBody = document.getElementById('teamBody');
+const ROLE_HELP = {
+  deals: 'Deals, proposals, invoices, reports, pitch templates and the Book me page. Can\'t edit your kit.',
+  full: 'Everything above, plus editing your kit and kit versions.',
+};
+
+function roleSelect(roles, value) {
+  const select = el('select', { 'aria-label': 'Access' }, Object.entries(roles).map(([key, name]) => el('option', { value: key, text: name })));
+  select.value = value;
+  const help = el('p', { class: 'small muted', text: ROLE_HELP[value] });
+  select.addEventListener('change', () => { help.textContent = ROLE_HELP[select.value]; });
+  return [select, help];
+}
+
+async function loadTeam() {
+  if (state.manager) {
+    teamPanel.hidden = true;
+    return;
+  }
+  let data;
+  try {
+    data = await api('/api/team');
+  } catch (err) {
+    teamBody.replaceChildren(el('p', { class: 'small muted', text: err.message }));
+    return;
+  }
+  teamPanel.classList.toggle('locked', data.locked && !data.manager);
+  const parts = [];
+
+  if (data.manager) {
+    const m = data.manager;
+    const [select, help] = roleSelect(data.roles, m.role);
+    select.addEventListener('change', async () => {
+      await api('/api/team/manager', { method: 'PUT', body: JSON.stringify({ role: select.value }) }).catch((err) => showBanner(err.message));
+    });
+    const remove = el('button', { type: 'button', class: 'button-link danger-link', text: 'Remove manager' });
+    remove.addEventListener('click', async () => {
+      if (!confirm(`Remove ${m.name}? They'll be signed out right away and can't get back in without a new invite.`)) return;
+      await api('/api/team/manager', { method: 'DELETE' }).catch((err) => showBanner(err.message));
+      loadTeam();
+    });
+    const details = [`Joined ${new Date(m.since).toLocaleDateString()}`];
+    if (m.lastActiveAt) details.push(`last active ${relativeTime(m.lastActiveAt)}`);
+    details.push(`${m.passkeys} passkey${m.passkeys === 1 ? '' : 's'}`);
+    parts.push(
+      el('p', {}, [el('strong', { text: m.name }), el('span', { class: 'muted', text: ` · ${details.join(' · ')}` })]),
+      el('label', {}, [document.createTextNode('Access'), select]), help,
+      data.locked ? el('p', { class: 'small plan-warning', text: 'Your Ultra plan has ended, so your manager can\'t sign in until you renew.' }) : '',
+      remove,
+    );
+  } else if (data.locked) {
+    parts.push(el('div', { class: 'teaser' }, [
+      el('p', { text: 'Ultra lets you invite a manager to help run your sponsorships: deals, proposals, invoices and reports. They sign in with a passkey and never see your billing or payouts.' }),
+    ]));
+  } else {
+    const [select, help] = roleSelect(data.roles, data.invite?.role || 'deals');
+    const create = el('button', { type: 'button', text: data.invite ? 'Create a new invite link' : 'Create invite link' });
+    const linkBox = el('div');
+    create.addEventListener('click', async () => {
+      try {
+        const { link } = await api('/api/team/invite', { method: 'POST', body: JSON.stringify({ role: select.value }) });
+        const copy = el('button', { type: 'button', class: 'button-secondary', text: 'Copy link' });
+        copy.addEventListener('click', () => copyText(link, copy));
+        linkBox.replaceChildren(
+          el('p', { class: 'kit-url', text: link }),
+          el('div', { class: 'actions' }, [copy]),
+          el('p', { class: 'small muted', text: `Send this to your manager. It works once and expires in 7 days. For safety we only show it now; if you lose it, just create a new one.` }),
+        );
+      } catch (err) {
+        showBanner(err.message);
+      }
+    });
+    parts.push(
+      el('p', { class: 'small muted', text: 'Invite one manager to help run your account. They sign in with a passkey (Face ID, fingerprint or PIN) and can never see your billing or payouts, or delete your account.' }),
+      el('label', {}, [document.createTextNode('Their access'), select]), help,
+      el('div', { class: 'actions' }, [create]),
+      linkBox,
+    );
+    if (data.invite) {
+      const cancel = el('button', { type: 'button', class: 'button-link', text: 'Cancel invite' });
+      cancel.addEventListener('click', async () => {
+        await api('/api/team/invite', { method: 'DELETE' }).catch((err) => showBanner(err.message));
+        loadTeam();
+      });
+      parts.push(el('p', { class: 'small' }, [
+        document.createTextNode(`An invite is waiting to be accepted (expires ${new Date(data.invite.expiresAt).toLocaleDateString()}). `),
+        cancel,
+      ]));
+    }
+  }
+  teamBody.replaceChildren(...parts);
+}
+
+// When a manager is signed in: say so, and hide what only the creator can do
+async function setupManagerMode() {
+  if (!state.manager) return;
+  document.body.classList.add('manager-mode');
+  if (state.manager.role === 'deals') document.body.classList.add('manager-deals');
+  const addKey = el('button', { type: 'button', class: 'button-link', text: 'Add a passkey for another device' });
+  addKey.addEventListener('click', async () => {
+    try {
+      const { createPasskey } = await import('/passkey.js');
+      await createPasskey({});
+      showBanner('Passkey added. You can now sign in on that device too.', 'success');
+    } catch (err) {
+      showBanner(err.message);
+    }
+  });
+  const bar = el('p', { class: 'alert alert-info manager-bar' }, [
+    el('strong', { text: `You're managing ${state.profile.displayName}'s account` }),
+    document.createTextNode(` as ${state.manager.name} (${state.manager.role === 'deals' ? 'deals only' : 'full access'}). `),
+    addKey,
+  ]);
+  app.prepend(bar);
+  if (state.manager.role === 'deals' && ['edit', 'versions'].includes(location.hash.slice(1))) showTab('deals');
+}
+
 // Referral program
 
 const referralForm = document.getElementById('payoutForm');
@@ -2807,8 +2927,10 @@ async function init() {
   loadAnalytics();
   loadDeals();
   showTab(location.hash.slice(1));
+  setupManagerMode();
   app.hidden = false;
-  loadReferrals();
+  if (!state.manager) loadReferrals();
+  loadTeam();
   // Continue an upgrade started on the pricing page
   let pendingUpgrade = null;
   try {

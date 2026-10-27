@@ -7,7 +7,7 @@ import { PLAN_NAMES, PLAN_RANK, activeGift } from '../lib/plans.js';
 
 async function signedIn(request, env) {
   if (!sameOrigin(request)) return { response: json({ error: 'Bad origin' }, 403) };
-  const user = await getSessionUser(request, env);
+  const user = await getSessionUser(request, env, { creatorOnly: true });
   if (!user) return { response: json({ error: 'Not signed in' }, 401) };
   if (!stripeConfigured(env)) return { response: json({ error: 'Payments are not set up yet.' }, 503) };
   return { user };

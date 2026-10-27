@@ -14,6 +14,7 @@ export async function onRequestGet({ request, env }) {
   if (!user) return json({ error: 'Not signed in' }, 401);
   return json({
     accountId: user.id,
+    manager: user.manager ? { name: user.manager.name, role: user.manager.role } : null,
     profile: profileFields(user),
     connections: await getConnections(env, user.id),
     views: await getViewStats(env, user.id),

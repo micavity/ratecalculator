@@ -9,6 +9,7 @@ async function essentialUser(request, env) {
   if (!sameOrigin(request)) return { response: json({ error: 'Bad origin' }, 403) };
   const user = await getSessionUser(request, env);
   if (!user) return { response: json({ error: 'Not signed in' }, 401) };
+  if (user.manager?.role === 'deals') return { response: json({ error: 'Your access is limited to deals, so you can\'t edit kit versions.' }, 403) };
   const limits = planLimits(user);
   if (!limits.essential) return { response: json({ error: 'Kit versions are part of Essential.', locked: true }, 403) };
   return { user, limits };
@@ -71,6 +72,7 @@ export async function onRequestDelete({ request, env, params }) {
   if (!sameOrigin(request)) return json({ error: 'Bad origin' }, 403);
   const user = await getSessionUser(request, env);
   if (!user) return json({ error: 'Not signed in' }, 401);
+  if (user.manager?.role === 'deals') return json({ error: 'Your access is limited to deals, so you can\'t edit kit versions.' }, 403);
   await env.DB.batch([
     env.DB.prepare('UPDATE tracked_links SET version_id = NULL WHERE version_id = ? AND user_id = ?').bind(params.id, user.id),
     env.DB.prepare('DELETE FROM kit_versions WHERE id = ? AND user_id = ?').bind(params.id, user.id),
