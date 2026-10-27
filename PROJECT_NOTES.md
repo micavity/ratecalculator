@@ -114,6 +114,19 @@ Free media kits and sponsorship rate estimates for creators. Built for gaming cr
 6. **Affiliate extras:** per-creator commission rates for ambassadors, custom codes.
 7. **Growth:** guides for search traffic ("what to charge for a sponsored stream", pitch templates).
 
+## Ultra ideas shortlist (liked, not built yet)
+
+Running the business:
+- **Expense tracker:** log gear, software, editors, travel; income report shows profit; yearly CSV for taxes.
+- **Tax set-aside helper:** pick a % and each paid deal shows how much to set aside, with a yearly total (labeled "not tax advice").
+- **Seasonal pricing:** automatically raise estimated rates in busy months (e.g. +20% in Q4).
+
+Working with brands (pick from):
+- **Content approval:** brand approves or requests changes on a draft (script, video, thumbnail), like proposals.
+- **Deal room:** one private page per deal for creator and brand with proposal, brief, deadlines, approvals, invoice and report.
+- **Brief inbox:** brands upload logos, images and talking points to a deal (Cloudflare R2, free up to 10 GB).
+- **Standard terms library:** saved clauses (usage rights, exclusivity, revisions, payment terms) to attach to proposals.
+
 ## Notes for whoever works on this next
 
 - Read `README.md` for setup, then this file.
