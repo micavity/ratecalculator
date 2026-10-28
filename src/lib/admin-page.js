@@ -24,6 +24,13 @@ export function renderAdminPage() {
     <section class="admin-stats" id="stats"></section>
 
     <section class="panel">
+      <h2>Reviews</h2>
+      <p class="small muted">Every review creators leave. The average counts all of them. "Approve" marks a review that may be shown on the site later; only creators who ticked "OK to show" can be approved. Approve to remove spam or personal info, not to hide low ratings.</p>
+      <div class="admin-stats" id="reviewTotals"></div>
+      <div id="reviews"></div>
+    </section>
+
+    <section class="panel">
       <h2>Affiliates</h2>
       <p class="small muted">Everyone who has referred a creator. Earnings are held for 30 days to cover refunds. To pay someone, send their available balance through PayPal, then click "Mark as paid". Use "Show referrals" to see who each affiliate brought in.</p>
       <div class="admin-stats" id="affiliateTotals"></div>
@@ -272,6 +279,40 @@ export function renderAdminPage() {
       }));
     }
 
+    async function loadReviews() {
+      const data = await api('/api/admin/reviews');
+      document.getElementById('reviewTotals').replaceChildren(
+        statCard(number.format(data.count), 'Reviews'),
+        statCard(data.average !== null ? '★ ' + data.average : '–', 'Average rating (all reviews)'),
+      );
+      const box = document.getElementById('reviews');
+      if (!data.reviews.length) {
+        box.replaceChildren(el('p', { class: 'muted', text: 'No reviews yet. Creators are asked 14 days after they start using CreatorGG.' }));
+        return;
+      }
+      box.replaceChildren(...data.reviews.map((r) => {
+        const approve = el('button', { type: 'button', class: r.approved ? 'button-secondary' : '', text: r.approved ? 'Approved ✓ (undo)' : 'Approve' });
+        approve.disabled = !r.publicOk;
+        approve.addEventListener('click', async () => {
+          try {
+            await api('/api/admin/reviews/' + r.id + '/approve', { method: 'POST', body: JSON.stringify({ approved: !r.approved }) });
+            loadReviews();
+          } catch (err) {
+            showBanner(err.message);
+          }
+        });
+        return el('div', { class: 'admin-row' }, [
+          el('div', {}, [
+            el('p', {}, [el('strong', { text: '★'.repeat(r.rating) + '☆'.repeat(5 - r.rating) + ' ' }), el('a', { href: '/' + r.slug, target: '_blank', rel: 'noopener', text: r.displayName })]),
+            r.comment ? el('p', { class: 'small', text: '“' + r.comment + '”' }) : el('p', { class: 'small muted', text: 'No comment' }),
+            el('p', { class: 'small muted', text: new Date(r.createdAt).toLocaleDateString() + ' · ' + (r.publicOk ? 'OK to show publicly' : 'Private feedback only') }),
+          ]),
+          el('div', { class: 'admin-actions' }, [approve]),
+        ]);
+      }));
+    }
+
+    loadReviews().catch((err) => showBanner(err.message));
     loadAffiliates().catch((err) => showBanner(err.message));
     loadStats().catch((err) => showBanner(err.message));
     loadUsers();

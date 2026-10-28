@@ -27,6 +27,7 @@ import * as reports from './routes/reports.js';
 import * as team from './routes/team.js';
 import * as monthly from './routes/monthly.js';
 import * as business from './routes/business.js';
+import * as reviews from './routes/reviews.js';
 import { ensureSchema } from './lib/migrate.js';
 import { refreshStaleUsers } from './lib/users.js';
 import { pruneOldEvents } from './lib/analytics.js';
@@ -92,6 +93,11 @@ const ROUTES = [
   ['POST', '/api/expenses', business.expensePost],
   ['DELETE', '/api/expenses/:id', business.expenseDelete],
   ['PUT', '/api/business', business.settingsPut],
+  ['POST', '/api/reviews', reviews.onRequestPost],
+  ['POST', '/api/reviews/later', reviews.later],
+  ['POST', '/api/reviews/never', reviews.never],
+  ['GET', '/api/admin/reviews', admin.reviews],
+  ['POST', '/api/admin/reviews/:id/approve', admin.approveReview],
   ['GET', '/update/:slug/:month', monthly.updatePage],
   ['POST', '/api/stripe/webhook', billing.webhook],
   ['GET', '/api/referrals', referrals.onRequestGet],

@@ -1851,3 +1851,16 @@ html[data-kit-style="gradient"] body {
   .expense-row { display: flex; flex-wrap: wrap; gap: 4px 10px; }
   .expense-row > :nth-child(2) { flex: 1 1 100%; order: -1; }
 }
+
+/* Review prompt */
+
+.review-prompt { border-color: var(--accent); }
+.review-prompt .section-head { flex-wrap: wrap; }
+.review-skip { display: flex; gap: 12px; }
+.review-stars { display: flex; gap: 6px; margin: 4px 0 8px; }
+.review-star { padding: 0 4px; background: none; color: var(--border); font-size: 2rem; line-height: 1; }
+.review-star.on, .review-star:hover { color: #eab308; filter: none; }
+.review-details { margin-top: 8px; }
+.review-comment span { display: block; margin-bottom: 4px; }
+.review-thanks { margin: 0; font-weight: 600; }
+.review-details [hidden] { display: none; }

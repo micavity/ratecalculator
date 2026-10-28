@@ -59,7 +59,7 @@ function saveConnection(env, userId, provider, account, stats) {
 }
 
 // Per-creator tables, besides users, connections and sessions
-export const USER_DATA_TABLES = ['kit_views', 'kit_sources', 'kit_countries', 'link_events', 'tracked_links', 'kit_versions', 'stat_snapshots', 'deals', 'invoices', 'proposals', 'booking_slots', 'campaign_reports', 'expenses'];
+export const USER_DATA_TABLES = ['kit_views', 'kit_sources', 'kit_countries', 'link_events', 'tracked_links', 'kit_versions', 'stat_snapshots', 'deals', 'invoices', 'proposals', 'booking_slots', 'campaign_reports', 'expenses', 'reviews'];
 
 // Profile fields copied from the merged-away profile when the kept one is empty
 const MERGE_FIELDS = [

@@ -3,6 +3,7 @@ import { getSessionUser } from '../lib/session.js';
 import { getConnections, getViewStats, profileFields } from '../lib/users.js';
 import { planInfo, planLimits } from '../lib/plans.js';
 import { businessSettings, seasonalBoost } from '../lib/business.js';
+import { shouldAskForReview } from '../lib/reviews.js';
 import { getVersions, versionFields } from '../lib/versions.js';
 import { billingInfo } from '../lib/billing.js';
 import { stripeConfigured, planConfigured } from '../lib/stripe.js';
@@ -18,6 +19,7 @@ export async function onRequestGet({ request, env }) {
     manager: user.manager ? { name: user.manager.name, role: user.manager.role } : null,
     business: businessSettings(user),
     seasonalBoost: seasonalBoost(user),
+    askForReview: await shouldAskForReview(env, user),
     profile: profileFields(user),
     connections: await getConnections(env, user.id),
     views: await getViewStats(env, user.id),

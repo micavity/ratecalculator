@@ -202,3 +202,34 @@ export async function markPaid({ request, env, params }) {
   ).bind(now, params.id, now).run();
   return json({ ok: true, paidCents: due.cents });
 }
+
+// Every review, newest first, with the average across all of them
+export async function reviews({ request, env }) {
+  const { response } = await requireAdmin(request, env);
+  if (response) return response;
+  const [list, summary] = await Promise.all([
+    env.DB.prepare(`SELECT r.*, u.display_name, u.slug FROM reviews r JOIN users u ON u.id = r.user_id ORDER BY r.created_at DESC LIMIT 200`).all(),
+    env.DB.prepare('SELECT COUNT(*) AS count, AVG(rating) AS average FROM reviews').first(),
+  ]);
+  return json({
+    count: summary.count,
+    average: summary.average ? Math.round(summary.average * 10) / 10 : null,
+    reviews: list.results.map((r) => ({
+      id: r.id, rating: r.rating, comment: r.comment || '', publicOk: Boolean(r.public_ok), approved: Boolean(r.approved),
+      createdAt: r.created_at, displayName: r.display_name, slug: r.slug,
+    })),
+  });
+}
+
+// Approve a review for showing on the site: { approved }. Only reviews the
+// creator agreed to share can be approved.
+export async function approveReview({ request, env, params }) {
+  const { response } = await requireAdmin(request, env, { write: true });
+  if (response) return response;
+  const body = await request.json().catch(() => ({}));
+  const review = await env.DB.prepare('SELECT public_ok FROM reviews WHERE id = ?').bind(params.id).first();
+  if (!review) return json({ error: 'Review not found' }, 404);
+  if (body.approved && !review.public_ok) return json({ error: "This creator didn't agree to share their review publicly." }, 400);
+  await env.DB.prepare('UPDATE reviews SET approved = ? WHERE id = ?').bind(body.approved ? 1 : 0, params.id).run();
+  return json({ ok: true });
+}

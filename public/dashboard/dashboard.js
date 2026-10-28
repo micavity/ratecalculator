@@ -3260,6 +3260,59 @@ function announceReport() {
   banner.append(open);
 }
 
+// Asking for a review, 14 days in (the server decides when)
+
+function renderReviewPrompt() {
+  document.getElementById('reviewPrompt')?.remove();
+  if (!state.askForReview) return;
+  let rating = 0;
+  const stars = el('div', { class: 'review-stars', role: 'radiogroup', 'aria-label': 'Your rating' });
+  const comment = el('textarea', { rows: '3', maxlength: '1000', placeholder: 'Tell us what you like, or what would make it better (optional)' });
+  const commentLabel = el('label', { class: 'review-comment' }, [el('span', { text: 'Anything to add?' }), comment]);
+  const consent = el('input', { type: 'checkbox' });
+  const consentLabel = el('label', { class: 'toggle small' }, [consent, document.createTextNode('OK to show my review on CreatorGG with my name and picture')]);
+  const send = el('button', { type: 'button', text: 'Send review' });
+  const details = el('div', { class: 'review-details' }, [commentLabel, consentLabel, el('div', { class: 'actions' }, [send])]);
+  details.hidden = true;
+  const buttons = [1, 2, 3, 4, 5].map((n) => {
+    const button = el('button', { type: 'button', class: 'review-star', role: 'radio', 'aria-checked': 'false', 'aria-label': `${n} star${n === 1 ? '' : 's'}`, text: '★' });
+    button.addEventListener('click', () => {
+      rating = n;
+      buttons.forEach((b, i) => { b.classList.toggle('on', i < n); b.setAttribute('aria-checked', String(i === n - 1)); });
+      commentLabel.firstChild.textContent = n <= 3 ? 'What could we do better?' : 'What do you like most?';
+      consentLabel.hidden = n <= 3;
+      details.hidden = false;
+    });
+    return button;
+  });
+  stars.append(...buttons);
+  const later = el('button', { type: 'button', class: 'button-link', text: 'Maybe later' });
+  const never = el('button', { type: 'button', class: 'button-link', text: "Don't ask again" });
+  const box = el('section', { class: 'panel review-prompt', id: 'reviewPrompt' }, [
+    el('div', { class: 'section-head' }, [el('h2', { text: "How's CreatorGG working for you?" }), el('span', { class: 'review-skip' }, [later, never])]),
+    stars,
+    details,
+  ]);
+  const close = async (path) => {
+    box.remove();
+    await api(path, { method: 'POST' }).catch(() => {});
+  };
+  later.addEventListener('click', () => close('/api/reviews/later'));
+  never.addEventListener('click', () => close('/api/reviews/never'));
+  send.addEventListener('click', async () => {
+    send.disabled = true;
+    try {
+      await api('/api/reviews', { method: 'POST', body: JSON.stringify({ rating, comment: comment.value, publicOk: rating > 3 && consent.checked }) });
+      box.replaceChildren(el('p', { class: 'review-thanks', text: rating > 3 ? 'Thank you! 💜 That really helps.' : 'Thank you for telling us. We read every one of these and will work on it.' }));
+      state.askForReview = false;
+    } catch (err) {
+      showBanner(err.message);
+      send.disabled = false;
+    }
+  });
+  document.getElementById('panel-overview').prepend(box);
+}
+
 // Referral program
 
 const referralForm = document.getElementById('payoutForm');
@@ -3332,6 +3385,7 @@ async function init() {
   app.hidden = false;
   loadMonthly();
   announceReport();
+  renderReviewPrompt();
   if (!state.manager) loadReferrals();
   loadTeam();
   // Continue an upgrade started on the pricing page
