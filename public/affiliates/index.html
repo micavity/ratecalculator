@@ -60,6 +60,7 @@
         <div class="billing-toggle" role="radiogroup" aria-label="Plan your referrals subscribe to">
           <label><input type="radio" name="plan" value="essential" checked> Essential</label>
           <label><input type="radio" name="plan" value="pro"> Pro</label>
+          <label><input type="radio" name="plan" value="ultra"> Ultra</label>
         </div>
         <label for="referrals">Creators you refer who subscribe to <span id="planName">Essential</span>: <strong id="referralCount">20</strong></label>
         <input type="range" id="referrals" min="1" max="200" value="20">
@@ -83,7 +84,7 @@
       </details>
       <details>
         <summary>What do the people I refer get?</summary>
-        <p>20% off their first 3 months of Essential or Pro. It's applied automatically when they sign up through your link, or they can type your code at checkout.</p>
+        <p>20% off their first 3 months of Essential, Pro or Ultra. It's applied automatically when they sign up through your link, or they can type your code at checkout.</p>
       </details>
       <details>
         <summary>Do I have to say I earn from it?</summary>
@@ -115,6 +116,7 @@
     const PLANS = {
       essential: { name: 'Essential', month: 4.99, year: 49.99 },
       pro: { name: 'Pro', month: 9.99, year: 99.99 },
+      ultra: { name: 'Ultra', month: 19.99, year: 199.99 },
     };
     const slider = document.getElementById('referrals');
     const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });

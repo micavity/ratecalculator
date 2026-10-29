@@ -1,4 +1,4 @@
-// Stripe subscriptions for Essential and Pro. Stripe is the source of truth: every
+// Stripe subscriptions for Essential, Pro and Ultra. Stripe is the source of truth: every
 // webhook re-fetches the object from Stripe (with our pinned API version)
 // before updating the creator's plan.
 import { stripe, planForPrice } from './stripe.js';
