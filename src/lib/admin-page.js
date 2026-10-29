@@ -85,11 +85,13 @@ export function renderAdminPage() {
       return data;
     }
 
+    // The creator's current plan, spelled out so it can't be mixed up with the gift controls
     function planText(plan) {
-      if (plan.plan === 'free') return 'Free';
-      const source = plan.source === 'gift' ? 'gifted' : plan.source || '';
-      const until = plan.expires ? 'until ' + new Date(plan.expires).toLocaleDateString() : 'lifetime';
-      return PLAN_NAMES[plan.plan] + ' · ' + source + ' · ' + until;
+      if (plan.plan === 'free') return 'Current plan: Free';
+      const date = plan.expires ? new Date(plan.expires).toLocaleDateString() : null;
+      if (plan.source === 'paid') return 'Current plan: ' + PLAN_NAMES[plan.plan] + ' · paying through Stripe · paid up to ' + date;
+      if (plan.source === 'gift') return 'Current plan: ' + PLAN_NAMES[plan.plan] + ' · gifted by an admin · ' + (date ? 'ends ' + date : 'never ends');
+      return 'Current plan: ' + PLAN_NAMES[plan.plan] + (date ? ' · ends ' + date : '');
     }
 
     async function loadStats() {
@@ -111,19 +113,28 @@ export function renderAdminPage() {
     }
 
     function creatorRow(u) {
-      const planSelect = el('select', { 'aria-label': 'Plan' }, ['essential', 'pro', 'ultra', 'free'].map((p) => el('option', { value: p, text: p === 'free' ? 'Free (remove gift)' : PLAN_NAMES[p] })));
-      planSelect.value = u.plan.plan === 'free' ? 'essential' : u.plan.plan;
-      const lengthSelect = el('select', { 'aria-label': 'Length' }, [
-        el('option', { value: '', text: 'Lifetime' }),
+      // Nothing is pre-selected, so the controls never read like the creator's plan
+      const planSelect = el('select', { 'aria-label': 'Gift a plan' }, [
+        el('option', { value: '', text: 'Gift a plan…' }),
+        ...['essential', 'pro', 'ultra'].map((p) => el('option', { value: p, text: 'Gift ' + PLAN_NAMES[p] })),
+        el('option', { value: 'free', text: 'Remove gift' }),
+      ]);
+      const lengthSelect = el('select', { 'aria-label': 'Gift length', hidden: '' }, [
+        el('option', { value: '', text: 'Never ends' }),
         el('option', { value: '1', text: '1 month' }),
         el('option', { value: '3', text: '3 months' }),
         el('option', { value: '12', text: '12 months' }),
       ]);
-      const apply = el('button', { type: 'button', text: 'Apply' });
-      const planLabel = el('p', { class: 'small', text: planText(u.plan) });
+      const apply = el('button', { type: 'button', text: 'Apply', hidden: '' });
+      planSelect.addEventListener('change', () => {
+        apply.hidden = !planSelect.value;
+        lengthSelect.hidden = !planSelect.value || planSelect.value === 'free';
+      });
+      const planLabel = el('p', { class: 'small admin-plan admin-plan-' + (u.plan.plan === 'free' ? 'free' : u.plan.source || 'other'), text: planText(u.plan) });
       apply.addEventListener('click', async () => {
         const plan = planSelect.value;
-        const verb = plan === 'free' ? 'Remove the plan from' : 'Gift ' + PLAN_NAMES[plan] + ' (' + (lengthSelect.selectedOptions[0].text.toLowerCase()) + ') to';
+        if (!plan) return;
+        const verb = plan === 'free' ? 'Remove the gifted plan from' : 'Gift ' + PLAN_NAMES[plan] + ' (' + (lengthSelect.selectedOptions[0].text.toLowerCase()) + ') to';
         if (!confirm(verb + ' ' + u.displayName + '?')) return;
         try {
           const data = await api('/api/admin/users/' + u.id + '/plan', {
@@ -131,6 +142,9 @@ export function renderAdminPage() {
             body: JSON.stringify({ plan, months: lengthSelect.value ? Number(lengthSelect.value) : null }),
           });
           planLabel.textContent = planText(data.plan);
+          planLabel.className = 'small admin-plan admin-plan-' + (data.plan.plan === 'free' ? 'free' : data.plan.source || 'other');
+          planSelect.value = '';
+          planSelect.dispatchEvent(new Event('change'));
           showBanner('Updated ' + u.displayName + '.', 'success');
           loadStats();
         } catch (err) {

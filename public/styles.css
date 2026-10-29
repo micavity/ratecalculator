@@ -1868,3 +1868,8 @@ html[data-kit-style="gradient"] body {
 .projection + .projection { margin-top: 18px; }
 .projection-lock { margin: 10px 0 0; color: var(--muted); }
 .projection-lock .plan-pill { margin: 0 4px 0 0; }
+.admin-plan { font-weight: 600; }
+.admin-plan-paid { color: var(--good); }
+.admin-plan-gift { color: var(--accent); }
+.admin-plan-free { color: var(--muted); font-weight: 400; }
+.admin-actions [hidden] { display: none; }
