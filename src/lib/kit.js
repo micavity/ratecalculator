@@ -202,7 +202,7 @@ function customRatesSection(rateCard, packages) {
  * Renders a public media kit. `user` may already have a kit version's
  * overrides applied; `path` is the kit's own path (with the version, if any).
  */
-export function renderKit(user, connections, { origin, host, viewer, print, path = `/${user.slug}`, live = null }) {
+export function renderKit(user, connections, { origin, host, viewer, print, path = `/${user.slug}`, live = null, growth = null }) {
   const limits = planLimits(user);
   const essential = limits.essential;
   const hideBranding = essential && Boolean(user.hide_branding);
@@ -242,7 +242,7 @@ export function renderKit(user, connections, { origin, host, viewer, print, path
   }
 
   const sectionHtml = {
-    platforms: `${audienceTotal ? `<p class="audience"><strong>${e(count(audienceTotal))}</strong> total followers across platforms</p>` : ''}
+    platforms: `${audienceTotal ? `<p class="audience"><strong>${e(count(audienceTotal))}</strong> total followers across platforms${growth ? `<span class="growth-line">📈 ${e(growth)}</span>` : ''}</p>` : ''}
     <div class="kit-grid">${cards || '<p class="empty">No stats yet.</p>'}</div>`,
     audience: audienceSection(parseJson(user.audience, {})),
     featured: featuredSection(featuredVideos(user, connections, limits), host, connections),

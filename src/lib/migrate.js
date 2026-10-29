@@ -357,6 +357,8 @@ export const MIGRATIONS = [
     'ALTER TABLE users ADD COLUMN review_snooze_until INTEGER',
     "ALTER TABLE users ADD COLUMN review_opt_out INTEGER NOT NULL DEFAULT 0",
   ],
+  // 19: Pro: show a growth line on the kit
+  ['ALTER TABLE users ADD COLUMN show_growth INTEGER NOT NULL DEFAULT 0'],
 ];
 
 let ready = null;

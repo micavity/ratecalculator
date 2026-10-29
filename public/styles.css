@@ -1864,3 +1864,7 @@ html[data-kit-style="gradient"] body {
 .review-comment span { display: block; margin-bottom: 4px; }
 .review-thanks { margin: 0; font-weight: 600; }
 .review-details [hidden] { display: none; }
+.growth-line { display: inline-block; margin-left: 10px; color: var(--good); font-weight: 600; font-size: 0.95rem; }
+.projection + .projection { margin-top: 18px; }
+.projection-lock { margin: 10px 0 0; color: var(--muted); }
+.projection-lock .plan-pill { margin: 0 4px 0 0; }

@@ -295,6 +295,7 @@ export function profileFields(user) {
     focus: user.focus,
     showRates: Boolean(user.show_rates),
     autoFeatured: Boolean(user.auto_featured),
+    showGrowth: Boolean(user.show_growth),
     shownStats: chosenStats(user, true),
     twitchAvgViewers: user.twitch_avg_viewers,
     twitchHours: user.twitch_hours,
@@ -360,6 +361,7 @@ export function validateProfile(body) {
   values.focus = body.focus in FOCUS_MULTIPLIER ? body.focus : 'gaming';
   values.show_rates = body.showRates ? 1 : 0;
   values.auto_featured = body.autoFeatured ? 1 : 0;
+  values.show_growth = body.showGrowth ? 1 : 0;
   const shownStats = readChosenStats(body.shownStats);
   if (shownStats.error) return fail('shownStats', shownStats.error);
   values.shown_stats = JSON.stringify(shownStats.value);
@@ -448,6 +450,7 @@ export function applyPlanLimits(values, user) {
   const allowed = { ...values };
   // Ultra settings stay as they were on other plans
   if (!limits.ultra) delete allowed.auto_featured;
+  if (!limits.pro) delete allowed.show_growth;
   if (limits.essential) return { values: allowed };
 
   for (const column of ESSENTIAL_COLUMNS) delete allowed[column];

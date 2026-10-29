@@ -5,7 +5,8 @@ import { recordVisit } from '../lib/analytics.js';
 import { hasPlan } from '../lib/plans.js';
 import { twitchConfigured, getLiveStream } from '../lib/twitch.js';
 import { applyVersion } from '../lib/versions.js';
-import { renderKit, renderNotFound } from '../lib/kit.js';
+import { renderKit, renderNotFound, hiddenStats } from '../lib/kit.js';
+import { kitGrowthLine } from '../lib/projections.js';
 
 // Ultra kits show a "Live now" badge while the creator streams on Twitch.
 // Never holds the kit up for long: anything slower than a second is skipped.
@@ -51,6 +52,9 @@ export async function onRequestGet(context) {
 
   const connections = await getConnections(env, user.id);
   const live = await liveStatus(env, user, connections);
+  const growth = hasPlan(user, 'pro') && user.show_growth
+    ? await kitGrowthLine(env, user, hiddenStats(user, true)).catch(() => null)
+    : null;
   // Refresh stale stats and count the view in the background
   context.waitUntil(refreshStats(env, user.id));
   context.waitUntil(recordVisit(env, request, user.id, viewer, linkId).catch((err) => console.error('View count failed:', err.message)));
@@ -62,5 +66,6 @@ export async function onRequestGet(context) {
     print: url.searchParams.has('print'),
     path: `/${slug}${versionKey ? `/${versionKey}` : ''}`,
     live,
+    growth,
   }));
 }

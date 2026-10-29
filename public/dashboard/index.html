@@ -175,6 +175,11 @@
 
     <!-- Monthly reports -->
     <div id="panel-reports" role="tabpanel" aria-labelledby="tab-reports" class="tab-panel" hidden>
+      <section class="panel" id="projectionsPanel">
+        <h2>Growth projections</h2>
+        <p class="small muted">Where your channels are heading if they keep growing like the last 30 days. Estimates, not promises.</p>
+        <div id="projections"></div>
+      </section>
       <section class="panel report-head">
         <div class="section-head">
           <h2>Monthly reports</h2>
@@ -554,6 +559,11 @@
         <p class="group-title">Auto-feature my best videos <span class="plan-pill">Ultra</span></p>
         <label class="toggle"><input type="checkbox" name="autoFeatured"> Fill open video slots with my most-viewed YouTube videos and Twitch clips from the last 28 days</label>
         <small>Videos you add above stay pinned first. Updates on its own as your stats refresh.</small>
+      </div>
+      <div class="essential-group" data-pro>
+        <p class="group-title">Show my growth <span class="plan-pill">Pro</span></p>
+        <label class="toggle"><input type="checkbox" name="showGrowth"> Add a line like "Growing ~600 YouTube subscribers a month" under your follower count</label>
+        <small>Worked out from your last 30 days of daily stats. It only shows while you're growing.</small>
       </div>
 
       <h2>Brands I've worked with</h2>

@@ -667,6 +667,10 @@ function renderPlan() {
     group.classList.toggle('locked', !limits.ultra);
     group.querySelectorAll('input').forEach((control) => { control.disabled = !limits.ultra; });
   });
+  form.querySelectorAll('[data-pro]').forEach((group) => {
+    group.classList.toggle('locked', !limits.pro);
+    group.querySelectorAll('input').forEach((control) => { control.disabled = !limits.pro; });
+  });
   form.querySelectorAll('[data-essential]').forEach((group) => {
     group.classList.toggle('locked', !limits.essential);
     if (!limits.essential) group.querySelectorAll('input, select, textarea, button').forEach((control) => { control.disabled = true; });
@@ -3182,6 +3186,74 @@ const REPORT_RENDER = {
   },
 };
 
+// Growth projections: more detail with each plan
+
+const PROJECTION_LOCKS = [
+  ['essential', 'Essential', '90-day and 6-month projections, a countdown to your next milestone, and whether you\'re speeding up or slowing down'],
+  ['pro', 'Pro', 'A 1-year range, your average views trend with next month\'s views, and a growth line on your kit'],
+  ['ultra', 'Ultra', 'What your rates will be in 3 months at the pace you\'re growing'],
+];
+
+function signed(n) {
+  return `${n > 0 ? '+' : ''}${number.format(n)}`;
+}
+
+function renderProjection(p) {
+  const cards = [
+    statCard(`${signed(p.perDay)}/day`, 'Daily average', `${signed(p.perMonth)} a month`),
+    statCard(number.format(p.in30), 'In 30 days'),
+  ];
+  if (p.in90 !== undefined) cards.push(statCard(number.format(p.in90), 'In 90 days'), statCard(number.format(p.in180), 'In 6 months'));
+  if (p.year) cards.push(statCard(`${number.format(p.year.low)}–${number.format(p.year.high)}`, 'In 1 year', `Most likely ${number.format(p.year.likely)}`));
+  const notes = [];
+  if (p.momentum) {
+    notes.push({ 'speeding up': '🚀 Growth is speeding up: your last week beat your monthly average.',
+      'slowing down': '🐢 Growth is slowing down: your last week was below your monthly average.',
+      steady: '➡️ Growth is steady: your last week matched your monthly average.' }[p.momentum]);
+  }
+  if (p.milestone) notes.push(`🎯 ${number.format(p.milestone.target)} ${p.unit} in about ${number.format(p.milestone.days)} day${p.milestone.days === 1 ? '' : 's'} (${shortDate(p.milestone.date)})`);
+  if (p.viewsTrend) {
+    const v = p.viewsTrend;
+    notes.push(`👀 Average views ${number.format(v.current)}${v.changePct !== null ? ` (${v.changePct > 0 ? '+' : ''}${v.changePct}% in ${p.days} days)` : ''}. Next month: about ${number.format(v.nextMonth)}.`);
+  }
+  return el('div', { class: 'projection' }, [
+    el('h3', { class: 'rates-heading', text: `${p.name} · ${number.format(p.current)} ${p.unit}` }),
+    el('div', { class: 'view-stats deal-stats' }, cards),
+    notes.length ? list(notes, '') : '',
+  ]);
+}
+
+async function loadProjections() {
+  const box = document.getElementById('projections');
+  let data;
+  try {
+    data = await api('/api/projections');
+  } catch (err) {
+    box.replaceChildren(el('p', { class: 'small muted', text: err.message }));
+    return;
+  }
+  const parts = data.platforms.map(renderProjection);
+  if (data.collecting.length) {
+    parts.push(el('p', { class: 'small muted', text: data.collecting.map((c) => `${c.name}: collecting daily stats (${Math.min(c.days, data.minDays)} of ${data.minDays} days)`).join(' · ') }));
+  }
+  if (!data.platforms.length && !data.collecting.length) {
+    parts.push(el('p', { class: 'small muted', text: `Projections start after ${data.minDays} days of daily stats. Link an account and check back in a week.` }));
+  }
+  if (data.rates?.length) {
+    parts.push(el('h3', { class: 'rates-heading', text: 'Your rates in 3 months' }),
+      list(data.rates.map((r) => `${r.name} · ${r.label}: ${r.now} now → ${r.in90}`), ''));
+  } else if (data.rates) {
+    parts.push(el('p', { class: 'small muted', text: 'Your rates in 3 months will show here once there\'s enough views data to project.' }));
+  }
+  for (const [plan, name, text] of PROJECTION_LOCKS) {
+    if (state.limits[plan]) continue;
+    parts.push(el('p', { class: 'small projection-lock' }, [
+      el('span', { class: 'plan-pill', text: name }), document.createTextNode(` ${text}. `), el('a', { href: '/pricing/', text: `Get ${name} →` }),
+    ]));
+  }
+  box.replaceChildren(...parts);
+}
+
 function renderMonthly() {
   const { sections } = reportData;
   reportSections.replaceChildren(...Object.keys(REPORT_INFO).map((key) => {
@@ -3384,6 +3456,7 @@ async function init() {
   setupManagerMode();
   app.hidden = false;
   loadMonthly();
+  loadProjections();
   announceReport();
   renderReviewPrompt();
   if (!state.manager) loadReferrals();
